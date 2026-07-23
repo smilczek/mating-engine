@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cd $(dirname "$0")
-mkdir build
-gcc main.c -o build/chess
+mkdir -p build
+gcc -O0 -g main.c -o build/chess
