@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 #define BOARDSIZE 8
 
@@ -11,6 +12,11 @@ typedef struct {
     bool BlackToPlay;
     char Board[BOARDSIZE * BOARDSIZE];
 } BoardState;
+
+typedef struct {
+    int Rank, File;
+} Coord;
+
 
 static BoardState g_BoardState = {0};
 
@@ -66,8 +72,41 @@ void printBoardState(BoardState *BS) {
     }
 }
 
+// Parse coord like e4, b2 etc.
+// 2 chars always.
+// lowercase assumed.
+// no verification.
+Coord parseCoordinateStr(char *CoordStr) {
+    assert(CoordStr[0] >= 'a' && CoordStr[0] <= 'h');
+    assert(CoordStr[1] >= '1' && CoordStr[1] <= '8');
+
+    Coord Ret = {0};
+    Ret.Rank = CoordStr[0] - 'a';
+    Ret.File = CoordStr[1] - '1';
+    return Ret;
+}
+
+void test_ParseCoordinateStr() {
+    Coord Co = parseCoordinateStr("a1");
+    assert(Co.Rank == 0);
+    assert(Co.File == 0);
+
+    Co = parseCoordinateStr("h8");
+    assert(Co.Rank == 7);
+    assert(Co.File == 7);
+
+    Co = parseCoordinateStr("e4");
+    assert(Co.Rank == 4);
+    assert(Co.File == 3);
+
+    Co = parseCoordinateStr("h5");
+    assert(Co.Rank == 7);
+    assert(Co.File == 4);
+}
+
 int main() {
     initBoardState(&g_BoardState);
     printBoardState(&g_BoardState);
+    test_ParseCoordinateStr();
     return 0;
 }
