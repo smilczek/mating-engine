@@ -10,6 +10,15 @@ typedef struct {
     int Turn;
     bool BlackToPlay;
     char Board[BOARDSIZE * BOARDSIZE];
+
+    // Castling rights
+    bool CR_WK; // White King
+    bool CR_WQ; // White Queen
+    bool CR_BK; // Black King
+    bool CR_BQ; // Black Queen
+
+    // En passant target
+    char EnPassant[2]; // e.g. e3
 } BoardState;
 
 typedef struct {
@@ -25,6 +34,7 @@ char lowercase(char c) {
 }
 
 // The board shall be so
+// F,R
 // 0,0 is A1,
 // 0,7 is A8,
 // 7,7 is H8.
@@ -37,6 +47,14 @@ void initBoardState(BoardState *BS) {
 
     BS->Turn = 0;
     BS->BlackToPlay = 0;
+
+    BS->CR_WK = true;
+    BS->CR_WQ = true;
+    BS->CR_BK = true;
+    BS->CR_BQ = true;
+
+    BS->EnPassant[0] = '\0';
+    BS->EnPassant[1] = '\0';
 
     int Rank = 0;
     for (int File = 0; File < BOARDSIZE; ++File) {
