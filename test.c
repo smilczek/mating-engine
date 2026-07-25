@@ -1,6 +1,6 @@
 #include "chess.c"
 
-bool test_lowercase() {
+static bool test_lowercase() {
     bool Success = true;
 
     Success &= lowercase('c') == 'c';
@@ -11,7 +11,7 @@ bool test_lowercase() {
     return Success;
 }
 
-bool test_parseCoordinateStr() {
+static bool test_parseCoordinateStr() {
     bool Success = true;
 
     Coord Co = parseCoordinateStr("a1");

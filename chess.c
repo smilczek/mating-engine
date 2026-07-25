@@ -26,7 +26,7 @@ typedef struct {
 } Coord;
 
 
-char lowercase(char c) {
+static char lowercase(char c) {
     if (c >= 'A' && c <= 'Z') {
         return c - 'A' + 'a';
     }
@@ -40,7 +40,7 @@ char lowercase(char c) {
 // 7,7 is H8.
 // upper case means white
 // lower case means black
-void initBoardState(BoardState *BS) {
+static void initBoardState(BoardState *BS) {
     const char *BackrankSetup = "RNBQKBNR";
     const char *PawnSetup =     "PPPPPPPP";
     // TODO(smilczek) verify BackrankSetup is of BOARDSIZE length
@@ -78,7 +78,7 @@ void initBoardState(BoardState *BS) {
 // 2 chars always.
 // lowercase assumed.
 // no verification.
-Coord parseCoordinateStr(char *CoordStr) {
+static Coord parseCoordinateStr(char *CoordStr) {
     assert(CoordStr[0] >= 'a' && CoordStr[0] <= 'h');
     assert(CoordStr[1] >= '1' && CoordStr[1] <= '8');
 
