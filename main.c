@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 
+static const char *STARTING_POSITION_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 static BoardState g_BoardState = {0};
 
 static void printBoardState(BoardState *BS) {
@@ -20,7 +22,7 @@ static void printBoardState(BoardState *BS) {
 }
 
 int main() {
-    initBoardState(&g_BoardState);
+    g_BoardState = ch_parseFEN(STARTING_POSITION_FEN);
     printBoardState(&g_BoardState);
     return 0;
 }

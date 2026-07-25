@@ -11,52 +11,11 @@ static char lowercase(char c) {
     return c;
 }
 
-// The board shall be so
-// F,R
-// 0,0 is A1,
-// 0,7 is A8,
-// 7,7 is H8.
-// upper case means white
-// lower case means black
-static void initBoardState(BoardState *BS) {
-    const char *BackrankSetup = "RNBQKBNR";
-    const char *PawnSetup =     "PPPPPPPP";
-    // TODO(smilczek) verify BackrankSetup is of BOARDSIZE length
-
-    BS->FullmoveNumber = 0;
-    BS->BlackToMove = 0;
-
-    BS->CR_WK = true;
-    BS->CR_WQ = true;
-    BS->CR_BK = true;
-    BS->CR_BQ = true;
-
-    BS->EnPassant[0] = '\0';
-    BS->EnPassant[1] = '\0';
-
-    int Rank = 0;
-    for (int File = 0; File < BOARDSIZE; ++File) {
-        BS->Board[Rank * BOARDSIZE + File] = BackrankSetup[File];
-    }
-    Rank = 1;
-    for (int File = 0; File < BOARDSIZE; ++File) {
-        BS->Board[Rank * BOARDSIZE + File] = PawnSetup[File];
-    }
-    Rank = 7;
-    for (int File = 0; File < BOARDSIZE; ++File) {
-        BS->Board[Rank * BOARDSIZE + File] = lowercase(BackrankSetup[File]);
-    }
-    Rank = 6;
-    for (int File = 0; File < BOARDSIZE; ++File) {
-        BS->Board[Rank * BOARDSIZE + File] = lowercase(PawnSetup[File]);
-    }
-}
-
 // Parse coord like e4, b2 etc.
 // 2 chars always.
 // lowercase assumed.
 // no verification.
-static Coord parseCoordinateStr(char *CoordStr) {
+static Coord ch_parseCoordinateStr(const char *CoordStr) {
     assert(CoordStr[0] >= 'a' && CoordStr[0] <= 'h');
     assert(CoordStr[1] >= '1' && CoordStr[1] <= '8');
 
@@ -69,7 +28,7 @@ static Coord parseCoordinateStr(char *CoordStr) {
 // assumes null-terminated string.
 // undef behavior for invalid FEN.
 // TODO(smilczek): FEN validation (separate func).
-static BoardState parseFEN(char *FENStr) {
+static BoardState ch_parseFEN(const char *FENStr) {
     BoardState BS = {0};
 
     int Rank = 7; // 8
