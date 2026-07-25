@@ -1,3 +1,5 @@
+#include "base.h"
+#include "chess.h"
 #include "chess.c"
 #include "string.h"
 
