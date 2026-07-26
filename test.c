@@ -30,16 +30,16 @@ static bool test_parseCoordinateStr() {
     Success &= Co.File == 7;
 
     Co = ch_parseCoordinateStr("e4");
-    assert(Co.Rank == 4);
-    assert(Co.File == 3);
-    Success &= Co.Rank == 4;
-    Success &= Co.File == 3;
+    assert(Co.Rank == 3);
+    assert(Co.File == 4);
+    Success &= Co.Rank == 3;
+    Success &= Co.File == 4;
 
     Co = ch_parseCoordinateStr("h5");
-    assert(Co.Rank == 7);
-    assert(Co.File == 4);
-    Success &= Co.Rank == 7;
-    Success &= Co.File == 4;
+    assert(Co.Rank == 4);
+    assert(Co.File == 7);
+    Success &= Co.Rank == 4;
+    Success &= Co.File == 7;
 
     return Success;
 }

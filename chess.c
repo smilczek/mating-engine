@@ -20,8 +20,8 @@ static Coord ch_parseCoordinateStr(const char *CoordStr) {
     assert(CoordStr[1] >= '1' && CoordStr[1] <= '8');
 
     Coord Ret = {0};
-    Ret.Rank = CoordStr[0] - 'a';
-    Ret.File = CoordStr[1] - '1';
+    Ret.File = CoordStr[0] - 'a';
+    Ret.Rank = CoordStr[1] - '1';
     return Ret;
 }
 
