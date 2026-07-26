@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "base.h"
 #include "chess.h"
 #include "chess.c"

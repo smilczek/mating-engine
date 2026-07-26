@@ -8,7 +8,7 @@ typedef struct {
 } Coord;
 
 typedef struct {
-    char Board[BOARDSIZE * BOARDSIZE];
+    char Board[BOARDSIZE][BOARDSIZE];
 
     bool BlackToMove;
 

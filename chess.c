@@ -1,9 +1,6 @@
 #ifndef _CHESS_C_
 #define _CHESS_C_
 
-#include <assert.h>
-
-
 static char lowercase(char c) {
     if (c >= 'A' && c <= 'Z') {
         return c - 'A' + 'a';
@@ -42,7 +39,7 @@ static BoardState ch_parseFEN(const char *FENStr) {
         }
         if (lowercase(Piece) >= 'a' && lowercase(Piece) <= 'z') {
             // Assume it's a valid piece (RNBKQ or rnbkq)
-            BS.Board[Rank * BOARDSIZE + File] = Piece;
+            BS.Board[Rank][File] = Piece;
             File++;
             continue;
         }
