@@ -107,6 +107,132 @@ static bool test_parseFEN() {
     return Success;
 }
 
+static bool test_inBoardBounds() {
+    bool Success = true;
+
+    Success &= ch_inBoardBounds(0, 0);
+    Success &= ch_inBoardBounds(7, 7);
+    Success &= !ch_inBoardBounds(8, 7);
+    Success &= !ch_inBoardBounds(7, 8);
+    Success &= !ch_inBoardBounds(-7, 8);
+    Success &= !ch_inBoardBounds(1, -1);
+
+    return Success;
+}
+
+static bool test_isFriendly() {
+    bool Success = true;
+
+    BoardState BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Success &= !ch_isFriendly(&BS, 'p');
+    Success &= ch_isFriendly(&BS, 'K');
+    Success &= ch_isEnemy(&BS, 'p');
+    Success &= !ch_isEnemy(&BS, 'K');
+
+    BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+    Success &= !ch_isFriendly(&BS, 'Q');
+    Success &= ch_isFriendly(&BS, 'n');
+    Success &= ch_isEnemy(&BS, 'Q');
+    Success &= !ch_isEnemy(&BS, 'n');
+
+    return Success;
+}
+
+static bool test_isColorPiece() {
+    bool Success = true;
+
+    Success &= ch_isWhitePiece('P');
+    Success &= ch_isWhitePiece('R');
+    Success &= ch_isWhitePiece('N');
+    Success &= ch_isWhitePiece('B');
+    Success &= ch_isWhitePiece('Q');
+    Success &= ch_isWhitePiece('K');
+
+    Success &= !ch_isWhitePiece('p');
+    Success &= !ch_isWhitePiece('r');
+    Success &= !ch_isWhitePiece('n');
+    Success &= !ch_isWhitePiece('b');
+    Success &= !ch_isWhitePiece('q');
+    Success &= !ch_isWhitePiece('k');
+
+    Success &= ch_isBlackPiece('p');
+    Success &= ch_isBlackPiece('r');
+    Success &= ch_isBlackPiece('n');
+    Success &= ch_isBlackPiece('b');
+    Success &= ch_isBlackPiece('q');
+    Success &= ch_isBlackPiece('k');
+
+    Success &= !ch_isBlackPiece('P');
+    Success &= !ch_isBlackPiece('R');
+    Success &= !ch_isBlackPiece('N');
+    Success &= !ch_isBlackPiece('B');
+    Success &= !ch_isBlackPiece('Q');
+    Success &= !ch_isBlackPiece('K');
+
+    return Success;
+}
+
+static bool test_pieceAt() {
+    bool Success = true;
+
+    BoardState BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Success &= ch_pieceAtCoord(&BS, (Coord){0, 0}) == 'R';
+    Success &= ch_pieceAtCoord(&BS, (Coord){0, 3}) == 'Q';
+    Success &= ch_pieceAtCoord(&BS, (Coord){1, 3}) == 'P';
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 7}) == 'r';
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 6}) == 'n';
+    Success &= ch_pieceAtCoord(&BS, (Coord){6, 7}) == 'p';
+
+    return Success;
+}
+
+static bool test_generatePseudoLegalMoves() {
+    bool Success = true;
+
+    // Same results for black/white
+    BoardState BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    MoveList MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 20;
+
+    BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 20;
+
+    BS = ch_parseFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 26;
+
+    BS = ch_parseFEN("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 26;
+
+    // Some endgame pos + no verify castling legality
+    BS = ch_parseFEN("3qk3/4p3/8/8/8/8/8/R3K3 w Q - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 16;
+
+    BS = ch_parseFEN("3qk3/4p3/8/8/8/8/8/R3K3 b Q - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 18;
+
+    // Ignore your king in check
+    BS = ch_parseFEN("4k3/8/1p1p1p2/8/1p1Q1p2/8/1p1p1p2/4K3 w - - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 21;
+
+    // Pawn promotion black
+    BS = ch_parseFEN("4k3/8/8/8/8/8/1p1p4/5K2 b - - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 13;
+
+    // Pawn promotion + pawn promotion with taking
+    BS = ch_parseFEN("2r2k2/3P4/8/8/8/8/8/5K2 w - - 0 1");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 13;
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
     Success &= test_lowercase();
@@ -114,6 +240,14 @@ int main() {
     Success &= test_parseCoordinateStr();
     assert(Success);
     Success &= test_parseFEN();
+    assert(Success);
+    Success &= test_inBoardBounds();
+    assert(Success);
+    Success &= test_isFriendly();
+    assert(Success);
+    Success &= test_isColorPiece();
+    assert(Success);
+    Success &= test_generatePseudoLegalMoves();
     assert(Success);
 
     return Success;

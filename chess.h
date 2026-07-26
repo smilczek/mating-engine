@@ -8,6 +8,10 @@ typedef struct {
 } Coord;
 
 typedef struct {
+    int R, F; // Rank, File
+} Dir;
+
+typedef struct {
     char Board[BOARDSIZE][BOARDSIZE];
 
     bool BlackToMove;
@@ -29,5 +33,42 @@ typedef struct {
     // Increments after black's move.
     int FullmoveNumber;
 } BoardState;
+
+typedef struct {
+    Coord From;
+    Coord To;
+    char Promotion;
+} Move;
+
+typedef struct {
+    // surely 256 is enough
+    Move List[256];
+    int Count;
+} MoveList;
+
+static const int BISHOP_DIR_SET[4][2] = {
+    { 1,  1},
+    { 1, -1},
+    {-1, -1},
+    {-1,  1}
+};
+
+static const int ROOK_DIR_SET[4][2] = {
+    { 0,  1},
+    { 0, -1},
+    { 1,  0},
+    {-1,  0}
+};
+
+static const int KNIGHT_MOVE_SET[8][2] = {
+    { 2,  1},
+    { 2, -1},
+    {-2,  1},
+    {-2, -1},
+    { 1,  2},
+    {-1,  2},
+    { 1, -2},
+    {-1, -2}
+};
 
 #endif
