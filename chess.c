@@ -156,7 +156,7 @@ static BoardState ch_parseFEN(const char *FENStr) {
 }
 
 static void ch_addMove(MoveList* MvList, Move Mv) {
-    assert(MvList->Count < 1000);
+    assert(MvList->Count < MOVE_LIST_SIZE);
     MvList->List[MvList->Count++] = Mv;
 }
 
@@ -189,6 +189,12 @@ static void ch_tryPawnTake(MoveList *MvList, BoardState *BS, Move Mv) {
     }
     char P = ch_pieceAtCoord(BS, Mv.To);
     if (!P) {
+        if (BS->EnPassant[0]) {
+            Coord EPSqr = ch_parseCoordinateStr(BS->EnPassant);
+            if (Mv.To.File == EPSqr.File && Mv.To.Rank == EPSqr.Rank) {
+                ch_addMove(MvList, Mv);
+            }
+        }
         return;
     }
     if (ch_isEnemy(BS, P)) {
@@ -321,6 +327,7 @@ static MoveList ch_generatePseudoLegalMoves(BoardState *BS) {
                     int PromoRank = BS->BlackToMove ? 0 : 7;
                     int BoostRank = BS->BlackToMove ? 6 : 1;
 
+                    // Attack left
                     Move Mv = {{Rank, File}, {Rank + PawnDir, File - 1}};
                     if (Mv.To.Rank == PromoRank) {
                         for (int i = 0; i < arr_len(PromoPieces); ++i) {
@@ -330,6 +337,7 @@ static MoveList ch_generatePseudoLegalMoves(BoardState *BS) {
                     } else {
                         ch_tryPawnTake(&MvList, BS, Mv);
                     }
+                    // Attack right
                     Mv = (Move){{Rank, File}, {Rank + PawnDir, File + 1}};
                     if (Mv.To.Rank == PromoRank) {
                         for (int i = 0; i < arr_len(PromoPieces); ++i) {
@@ -372,12 +380,32 @@ static bool ch_moveIsCastling(BoardState *BS, Move Mv) {
     return false;
 }
 
+static char rankToChar(int Rank) {
+    return Rank + '1';
+}
+static char fileToChar(int File) {
+    return File + 'a';
+}
+
 // Assumes the move is at least pseudo-legal.
 // Doesn't verify legality.
 static void ch_applyMove(BoardState *BS, Move Mv) {
     char P = BS->Board[Mv.From.Rank][Mv.From.File];
     BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
     BS->Board[Mv.To.Rank][Mv.To.File] = P;
+
+    BS->EnPassant[0] = '\0';
+    BS->EnPassant[1] = '\0';
+
+    if (lowercase(P) == 'p') {
+        int Distance = Mv.To.Rank - Mv.From.Rank;
+        int AbsDistance = Distance < 0 ? -Distance : Distance;
+        if (AbsDistance == 2) {
+            int EPRank = Mv.To.Rank - (Distance / 2);
+            BS->EnPassant[0] = fileToChar(Mv.To.File);
+            BS->EnPassant[1] = rankToChar(EPRank);
+        }
+    }
 
     switch (P) {
         case 'k': {
@@ -567,7 +595,7 @@ static bool ch_moveIsLegal(BoardState *BS, Move Mv) {
     BoardState BSCopy = *BS;
     ch_applyMove(&BSCopy, Mv);
     Coord KingCoord = ch_findKing(&BSCopy, BlackAttacks);
-    if (ch_squareIsAttacked(BS, KingCoord, BlackAttacks)) {
+    if (ch_squareIsAttacked(&BSCopy, KingCoord, BlackAttacks)) {
         return false;
     }
     return true;

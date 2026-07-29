@@ -230,6 +230,11 @@ static bool test_generatePseudoLegalMoves() {
     MvL = ch_generatePseudoLegalMoves(&BS);
     Success &= MvL.Count == 13;
 
+    // En Passant
+    BS = ch_parseFEN("8/8/3k4/2pP4/3r4/8/5r1r/4K3 w - c6 0 2");
+    MvL = ch_generatePseudoLegalMoves(&BS);
+    Success &= MvL.Count == 6;
+
     return Success;
 }
 
@@ -239,7 +244,19 @@ static bool test_filterLegalMoves() {
     BoardState BS = ch_parseFEN("3qk3/4p3/8/8/8/8/8/R3K3 w Q - 0 1");
     MoveList Pseudo = ch_generatePseudoLegalMoves(&BS);
     MoveList Legal = ch_filterLegalMoves(&BS, &Pseudo);
-    Success &= Legal.Count == 13;
+    Success &= Legal.Count == 13 && Legal.Count < Pseudo.Count;
+
+    // En Passant
+    BS = ch_parseFEN("8/8/3k4/2pP4/3r4/8/5r1r/4K3 w - c6 0 2");
+    Pseudo = ch_generatePseudoLegalMoves(&BS);
+    Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    Success &= Legal.Count == 1;
+
+    // En Passant illegal
+    BS = ch_parseFEN("4k3/8/4r3/3pP3/8/8/3r1r2/4K3 w - d6 0 2");
+    Pseudo = ch_generatePseudoLegalMoves(&BS);
+    Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    Success &= Legal.Count == 0;
 
     return Success;
 }

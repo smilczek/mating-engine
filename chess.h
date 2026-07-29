@@ -3,6 +3,8 @@
 
 #define BOARDSIZE 8
 
+#define MOVE_LIST_SIZE 256
+
 typedef struct {
     int Rank, File;
 } Coord;
@@ -41,8 +43,7 @@ typedef struct {
 } Move;
 
 typedef struct {
-    // surely 256 is enough
-    Move List[256];
+    Move List[MOVE_LIST_SIZE];
     int Count;
 } MoveList;
 
