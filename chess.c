@@ -360,10 +360,228 @@ static MoveList ch_generatePseudoLegalMoves(BoardState *BS) {
     return MvList;
 }
 
-MoveList ch_filterLegalMoves(MoveList *Pseudo) {
+// Move is castling if the king jumps from File 4 to 2 or 6
+static bool ch_moveIsCastling(BoardState *BS, Move Mv) {
+    char P = BS->Board[Mv.From.Rank][Mv.From.File];
+    if (lowercase(P) != 'k') {
+        return false;
+    }
+    if (Mv.From.File == 4 && (Mv.To.File == 2 || Mv.To.File == 6)) {
+        return true;
+    }
+    return false;
+}
+
+// Assumes the move is at least pseudo-legal.
+// Doesn't verify legality.
+static void ch_applyMove(BoardState *BS, Move Mv) {
+    char P = BS->Board[Mv.From.Rank][Mv.From.File];
+    BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
+    BS->Board[Mv.To.Rank][Mv.To.File] = P;
+
+    switch (P) {
+        case 'k': {
+            BS->CR_BK = false;
+            BS->CR_BQ = false;
+            break;
+        }
+        case 'K': {
+            BS->CR_WK = false;
+            BS->CR_WQ = false;
+            break;
+        }
+        case 'r': {
+            // TODO(smilczek): Generalize this for chess960
+            if (Mv.From.File == 0) {
+                BS->CR_BQ = false;
+            }
+            if (Mv.From.File == 7) {
+                BS->CR_BK = false;
+            }
+            break;
+        }
+        case 'R': {
+            // TODO(smilczek): Generalize this for chess960
+            if (Mv.From.File == 0) {
+                BS->CR_WQ = false;
+            }
+            if (Mv.From.File == 7) {
+                BS->CR_WK = false;
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if (ch_moveIsCastling(BS, Mv)) {
+        if (Mv.To.File == 2) {
+            int RookFromFile = 0;
+            int RookToFile = 3;
+            char Rook = BS->Board[Mv.From.Rank][RookFromFile];
+            BS->Board[Mv.From.Rank][RookFromFile] = '\0';
+            BS->Board[Mv.To.Rank][RookToFile] = Rook;
+        } else {
+            int RookFromFile = 7;
+            int RookToFile = 5;
+            char Rook = BS->Board[Mv.From.Rank][RookFromFile];
+            BS->Board[Mv.From.Rank][RookFromFile] = '\0';
+            BS->Board[Mv.To.Rank][RookToFile] = Rook;
+        }
+    }
+
+    BS->BlackToMove = !BS->BlackToMove;
+}
+
+// ByBlack flag needed because we need to be able to check if a square is
+// attacked after we've made a move.
+static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
+    // TODO(smilczek): Refactor this unmaintainable garbage. Fix code redundancy
+
+    // Check if attacked by pawns, check if sees rook, bishop, knight.
+    int Rank = Sqr.Rank;
+    int File = Sqr.File;
+    // Black pawns attack from above, white from below.
+    {
+        int EnemyPawnRankDir = ByBlack ? 1 : -1;
+        Coord PawnRight = {Sqr.Rank + EnemyPawnRankDir, Sqr.File + 1};
+        Coord PawnLeft = {Sqr.Rank + EnemyPawnRankDir, Sqr.File - 1};
+        char AttackerPawn = ByBlack ? 'p' : 'P';
+        if (!ch_isCoordOOB(PawnRight) &&
+                ch_pieceAtCoord(BS, PawnRight) == AttackerPawn) {
+            return true;
+        }
+        if (!ch_isCoordOOB(PawnLeft) &&
+                ch_pieceAtCoord(BS, PawnLeft) == AttackerPawn) {
+            return true;
+        }
+    }
+
+    // Knight attacks
+    for (int i = 0; i < arr_len(KNIGHT_MOVE_SET); ++i) {
+        char AttackerKnight = ByBlack ? 'n' : 'N';
+        Dir D = {KNIGHT_MOVE_SET[i][0], KNIGHT_MOVE_SET[i][1]};
+        Coord KnightJump = {Rank + D.R, File + D.F};
+        if (!ch_isCoordOOB(KnightJump) &&
+                ch_pieceAtCoord(BS, KnightJump) == AttackerKnight) {
+            return true;
+        }
+    }
+
+    // King attacks
+    for (int i = 0; i < arr_len(BISHOP_DIR_SET); ++i) {
+        char AttackerKing = ByBlack ? 'k' : 'K';
+        Dir D = {BISHOP_DIR_SET[i][0], BISHOP_DIR_SET[i][1]};
+        Coord KingStep = {Rank + D.R, File + D.F};
+        if (!ch_isCoordOOB(KingStep) &&
+                ch_pieceAtCoord(BS, KingStep) == AttackerKing) {
+            return true;
+        }
+    }
+    for (int i = 0; i < arr_len(ROOK_DIR_SET); ++i) {
+        char AttackerKing = ByBlack ? 'k' : 'K';
+        Dir D = {ROOK_DIR_SET[i][0], ROOK_DIR_SET[i][1]};
+        Coord KingStep = {Rank + D.R, File + D.F};
+        if (!ch_isCoordOOB(KingStep) &&
+                ch_pieceAtCoord(BS, KingStep) == AttackerKing) {
+            return true;
+        }
+    }
+
+    // Bishop/Queen
+    for (int i = 0; i < arr_len(BISHOP_DIR_SET); ++i) {
+        char AttackerBishop = ByBlack ? 'b' : 'B';
+        char AttackerQueen = ByBlack ? 'q' : 'Q';
+        Dir D = {BISHOP_DIR_SET[i][0], BISHOP_DIR_SET[i][1]};
+        Coord BishopStep = {Rank + D.R, File + D.F};
+        while (!ch_isCoordOOB(BishopStep)) {
+            char P = ch_pieceAtCoord(BS, BishopStep);
+            if (ByBlack && ch_isWhitePiece(P)) {
+                break;
+            }
+            if (!ByBlack && ch_isBlackPiece(P)) {
+                break;
+            }
+            if (P == AttackerBishop || P == AttackerQueen) {
+                return true;
+            }
+            BishopStep.Rank += D.R;
+            BishopStep.File += D.F;
+        }
+    }
+
+    // Rook/Queen
+    for (int i = 0; i < arr_len(ROOK_DIR_SET); ++i) {
+        char AttackerRook = ByBlack ? 'r' : 'R';
+        char AttackerQueen = ByBlack ? 'q' : 'Q';
+        Dir D = {ROOK_DIR_SET[i][0], ROOK_DIR_SET[i][1]};
+        Coord RookStep = {Rank + D.R, File + D.F};
+        while (!ch_isCoordOOB(RookStep)) {
+            char P = ch_pieceAtCoord(BS, RookStep);
+            if (ByBlack && ch_isWhitePiece(P)) {
+                break;
+            }
+            if (!ByBlack && ch_isBlackPiece(P)) {
+                break;
+            }
+            if (P == AttackerRook || P == AttackerQueen) {
+                return true;
+            }
+            RookStep.Rank += D.R;
+            RookStep.File += D.F;
+        }
+    }
+
+    return false;
+}
+
+static Coord ch_findKing(BoardState *BS, bool White) {
+    char TheKing = White ? 'K' : 'k';
+    for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            if (ch_pieceAt(BS, Rank, File) == TheKing) {
+                return (Coord){Rank, File};
+            }
+        }
+    }
+    assert(false);
+    return (Coord){-1, -1};
+}
+
+static bool ch_moveIsLegal(BoardState *BS, Move Mv) {
+    // White to move means we need to watch for attacking black pieces.
+    bool BlackAttacks = !BS->BlackToMove;
+
+    char P = BS->Board[Mv.From.Rank][Mv.From.File];
+    if (ch_moveIsCastling(BS, Mv)) {
+        // Can't castle out of check.
+        if (ch_squareIsAttacked(BS, Mv.From, BlackAttacks)) {
+            return false;
+        }
+        Coord JumpedSqr = {Mv.From.Rank, (Mv.From.File + Mv.To.File) / 2};
+        if (ch_squareIsAttacked(BS, JumpedSqr, BlackAttacks)) {
+            return false;
+        }
+    }
+    BoardState BSCopy = *BS;
+    ch_applyMove(&BSCopy, Mv);
+    Coord KingCoord = ch_findKing(&BSCopy, BlackAttacks);
+    if (ch_squareIsAttacked(BS, KingCoord, BlackAttacks)) {
+        return false;
+    }
+    return true;
+}
+
+MoveList ch_filterLegalMoves(BoardState *BS, MoveList *Pseudo) {
     MoveList Legal = {0};
 
-    // TODO(smilczek)
+    for (int i = 0; i < Pseudo->Count; ++i) {
+        Move Mv = Pseudo->List[i];
+        if (ch_moveIsLegal(BS, Mv)) {
+            ch_addMove(&Legal, Mv);
+        }
+    }
 
     return Legal;
 }

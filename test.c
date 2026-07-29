@@ -233,6 +233,17 @@ static bool test_generatePseudoLegalMoves() {
     return Success;
 }
 
+static bool test_filterLegalMoves() {
+    bool Success = true;
+    // Some endgame pos + verify castling legality
+    BoardState BS = ch_parseFEN("3qk3/4p3/8/8/8/8/8/R3K3 w Q - 0 1");
+    MoveList Pseudo = ch_generatePseudoLegalMoves(&BS);
+    MoveList Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    Success &= Legal.Count == 13;
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
     Success &= test_lowercase();
@@ -249,6 +260,9 @@ int main() {
     assert(Success);
     Success &= test_generatePseudoLegalMoves();
     assert(Success);
+    Success &= test_filterLegalMoves();
+    assert(Success);
+
 
     return Success;
 }
