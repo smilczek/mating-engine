@@ -4,6 +4,22 @@
 #include "chess.c"
 #include "string.h"
 
+#include <stdio.h>
+
+// helper for debugging
+static void printBoardState(BoardState *BS) {
+    for (int Rank = BOARDSIZE - 1; Rank > -1; --Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            char Square = BS->Board[Rank][File];
+            if (Square == '\0') {
+                Square = '.';
+            }
+            printf("%c", Square);
+        }
+        printf("\n");
+    }
+}
+
 static bool test_lowercase() {
     bool Success = true;
 
@@ -238,6 +254,46 @@ static bool test_generatePseudoLegalMoves() {
     return Success;
 }
 
+static bool test_applyMove() {
+    bool Success = true;
+    // Same results for black/white
+    BoardState BS = ch_parseFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Move Mv = {{1, 4}, {3, 4}};
+    ch_applyMove(&BS, Mv);
+    Success &= ch_pieceAtCoord(&BS, Mv.To) == 'P';
+    Success &= ch_pieceAtCoord(&BS, Mv.From) == '\0';
+    Success &= BS.EnPassant[0] == 'e';
+    Success &= BS.EnPassant[1] == '3';
+    Success &= BS.BlackToMove == true;
+    Success &= BS.CR_WK && BS.CR_WQ && BS.CR_BK && BS.CR_BQ;
+
+    Mv = (Move){{6, 4}, {4, 4}};
+    ch_applyMove(&BS, Mv);
+    Success &= BS.EnPassant[0] == 'e';
+    Success &= BS.EnPassant[1] == '6';
+
+    Mv = (Move){{0, 4}, {1, 4}};
+    ch_applyMove(&BS, Mv);
+    Success &= BS.EnPassant[0] == '\0';
+    Success &= !BS.CR_WK && !BS.CR_WQ && BS.CR_BK && BS.CR_BQ;
+
+    BS = ch_parseFEN("8/8/3k4/2pP4/3r4/8/5r1r/4K3 w - c6 0 2");
+    MoveList Pseudo = ch_generatePseudoLegalMoves(&BS);
+    MoveList Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    ch_applyMove(&BS, Legal.List[0]);
+    Success &= ch_pieceAtCoord(&BS, (Coord){5, 2}) == 'P';
+    Success &= ch_pieceAtCoord(&BS, (Coord){4, 2}) == '\0';
+
+    BS = ch_parseFEN("8/4B3/R7/7k/5pP1/8/8/4K1R1 b - g3 0 1");
+    Pseudo = ch_generatePseudoLegalMoves(&BS);
+    Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    ch_applyMove(&BS, Legal.List[0]);
+    Success &= ch_pieceAtCoord(&BS, (Coord){2, 6}) == 'p';
+    Success &= ch_pieceAtCoord(&BS, (Coord){3, 5}) == '\0';
+
+    return Success;
+}
+
 static bool test_filterLegalMoves() {
     bool Success = true;
     // Some endgame pos + verify castling legality
@@ -257,6 +313,15 @@ static bool test_filterLegalMoves() {
     Pseudo = ch_generatePseudoLegalMoves(&BS);
     Legal = ch_filterLegalMoves(&BS, &Pseudo);
     Success &= Legal.Count == 0;
+
+    // En Passant checking pawn
+    BS = ch_parseFEN("8/4B3/R7/7k/5pP1/8/8/4K1R1 b - g3 0 1");
+    Pseudo = ch_generatePseudoLegalMoves(&BS);
+    Legal = ch_filterLegalMoves(&BS, &Pseudo);
+    Success &= Legal.Count == 1;
+    // TODO(smilczek): separate tester for this func
+    // Test moveIsEnPassant
+    Success &= ch_moveIsEnPassant(&BS, Legal.List[0]);
 
     return Success;
 }
@@ -278,6 +343,8 @@ int main() {
     Success &= test_generatePseudoLegalMoves();
     assert(Success);
     Success &= test_filterLegalMoves();
+    assert(Success);
+    Success &= test_applyMove();
     assert(Success);
 
 

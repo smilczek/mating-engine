@@ -387,12 +387,32 @@ static char fileToChar(int File) {
     return File + 'a';
 }
 
+static bool ch_moveIsEnPassant(BoardState *BS, Move Mv) {
+    if (!BS->EnPassant[0]) {
+        return false;
+    }
+    Coord EPCoord = ch_parseCoordinateStr(BS->EnPassant);
+    if (Mv.To.Rank != EPCoord.Rank || Mv.To.File != EPCoord.File) {
+        return false;
+    }
+    if (lowercase(ch_pieceAtCoord(BS, Mv.From)) == 'p') {
+        return true;
+    }
+    return false;
+}
+
 // Assumes the move is at least pseudo-legal.
 // Doesn't verify legality.
 static void ch_applyMove(BoardState *BS, Move Mv) {
     char P = BS->Board[Mv.From.Rank][Mv.From.File];
+    bool IsEnPassant = ch_moveIsEnPassant(BS, Mv);
     BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
     BS->Board[Mv.To.Rank][Mv.To.File] = P;
+
+    if (IsEnPassant) {
+        // The pawn that used to be next to our pawn.
+        BS->Board[Mv.From.Rank][Mv.To.File] = '\0';
+    }
 
     BS->EnPassant[0] = '\0';
     BS->EnPassant[1] = '\0';
@@ -610,6 +630,13 @@ MoveList ch_filterLegalMoves(BoardState *BS, MoveList *Pseudo) {
             ch_addMove(&Legal, Mv);
         }
     }
+
+    return Legal;
+}
+
+MoveList ch_getLegalMoves(BoardState *BS) {
+    MoveList Pseudo = ch_generatePseudoLegalMoves(BS);
+    MoveList Legal = ch_filterLegalMoves(BS, &Pseudo);
 
     return Legal;
 }
