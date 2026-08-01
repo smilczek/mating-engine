@@ -6,6 +6,8 @@
 
 #define INFINITY (__builtin_inff())
 
+#define ABS(x) (x < 0.0f ? -x : x)
+
 typedef struct {
     Move Moves[ENGINE_DEPTH]; // White and Black
     float Eval;
@@ -75,6 +77,11 @@ float en_evaluatePosition(BoardState *BS) {
                     break;
                 }
             }
+            float HalfBoard = (float)BOARDSIZE / 2.0f;
+            float PiecePosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
+                                (HalfBoard - ABS((float)F - HalfBoard));
+            PiecePosVal /= 8.0f;
+            Eval += PiecePosVal;
             Eval += PieceVal;
         }
     }
