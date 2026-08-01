@@ -28,12 +28,18 @@ static void printMove(BoardState *BS, Move Mv) {
     if (lowercase(P) != 'p') {
         printf("%c", P);
     }
-    printf("%c%c\n", ch_fileToChar(Mv.To.File), ch_rankToChar(Mv.To.Rank));
+    printf("%c%c", ch_fileToChar(Mv.To.File), ch_rankToChar(Mv.To.Rank));
 }
 
 int main() {
-    BoardState BS = ch_parseFEN("rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2");
+    BoardState BS = ch_parseFEN("6R1/4r2p/5ppk/1b6/1B3p2/1BP5/PP4PP/6K1 b - - 3 34");
     SequenceList SeqL = en_findBestSequence(&BS);
-    printMove(&BS, SeqL.List[0].Moves[0]);
+    for (int i = 0; i < arr_len(SeqL.List[0].Moves); i += 2) {
+        printf("%d. ", (i + 2 / 2));
+        printMove(&BS, SeqL.List[0].Moves[i]);
+        printf(" ");
+        printMove(&BS, SeqL.List[0].Moves[i + 1]);
+        printf(" ");
+    }
     return 0;
 }
