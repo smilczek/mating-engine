@@ -352,6 +352,13 @@ static bool test_findBestSequence() {
     Success &= SeqL.List[0].Moves[0].To.Rank == 1;
     Success &= SeqL.List[0].Moves[0].To.File == 3;
 
+    BS = ch_parseFEN("6R1/4r2p/5ppk/1b6/1B3p2/1BP5/PP4PP/6K1 b - - 3 34");
+    SeqL = en_findBestSequence(&BS);
+    Success &= SeqL.List[0].Moves[0].From.Rank == 6;
+    Success &= SeqL.List[0].Moves[0].From.File == 4;
+    Success &= SeqL.List[0].Moves[0].To.Rank == 0;
+    Success &= SeqL.List[0].Moves[0].To.File == 4;
+
     return Success;
 }
 
