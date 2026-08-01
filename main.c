@@ -32,12 +32,12 @@ static void printMove(BoardState *BS, Move Mv) {
 int main() {
     // BoardState BS = ch_parseFEN("6R1/4r2p/5ppk/1b6/1B3p2/1BP5/PP4PP/6K1 b - - 3 34");
     BoardState BS = ch_parseFEN(STARTING_POSITION_FEN);
-    SequenceList SeqL = en_findBestSequence(&BS);
-    for (int i = 0; i < arr_len(SeqL.List[0].Moves); i += 2) {
+    Sequence Seq = en_findBestSequence(&BS);
+    for (int i = 0; i < arr_len(Seq.Moves); i += 2) {
         printf("%d. ", (i + 2 / 2));
-        printMove(&BS, SeqL.List[0].Moves[i]);
+        printMove(&BS, Seq.Moves[i]);
         printf(" ");
-        printMove(&BS, SeqL.List[0].Moves[i + 1]);
+        printMove(&BS, Seq.Moves[i + 1]);
         printf(" ");
     }
     printf("\n");

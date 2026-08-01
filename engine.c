@@ -13,10 +13,6 @@ typedef struct {
     float Eval;
 } Sequence;
 
-typedef struct {
-    Sequence List[1];
-} SequenceList;
-
 float en_evaluatePosition(BoardState *BS) {
     // TODO(smilczek): Test if counting the legal moves for
     //                 each side is also a valid eval strat.
@@ -140,11 +136,10 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
     return CurrBestSeq;
 }
 
-SequenceList en_findBestSequence(BoardState *BS) {
-    SequenceList SeqList = {0};
-    SeqList.List[0] = en_recurrentEvaluateMove(BS, (Sequence){0}, 0,
+Sequence en_findBestSequence(BoardState *BS) {
+    Sequence Seq = en_recurrentEvaluateMove(BS, (Sequence){0}, 0,
             -INFINITY, INFINITY);
-    return SeqList;
+    return Seq;
 }
 
 #endif
