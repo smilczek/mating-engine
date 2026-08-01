@@ -380,10 +380,10 @@ static bool ch_moveIsCastling(BoardState *BS, Move Mv) {
     return false;
 }
 
-static char rankToChar(int Rank) {
+static char ch_rankToChar(int Rank) {
     return Rank + '1';
 }
-static char fileToChar(int File) {
+static char ch_fileToChar(int File) {
     return File + 'a';
 }
 
@@ -422,8 +422,8 @@ static void ch_applyMove(BoardState *BS, Move Mv) {
         int AbsDistance = Distance < 0 ? -Distance : Distance;
         if (AbsDistance == 2) {
             int EPRank = Mv.To.Rank - (Distance / 2);
-            BS->EnPassant[0] = fileToChar(Mv.To.File);
-            BS->EnPassant[1] = rankToChar(EPRank);
+            BS->EnPassant[0] = ch_fileToChar(Mv.To.File);
+            BS->EnPassant[1] = ch_rankToChar(EPRank);
         }
     }
 
@@ -545,6 +545,11 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
         Coord BishopStep = {Rank + D.R, File + D.F};
         while (!ch_isCoordOOB(BishopStep)) {
             char P = ch_pieceAtCoord(BS, BishopStep);
+            BishopStep.Rank += D.R;
+            BishopStep.File += D.F;
+            if (!P) {
+                continue;
+            }
             if (ByBlack && ch_isWhitePiece(P)) {
                 break;
             }
@@ -554,8 +559,6 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
             if (P == AttackerBishop || P == AttackerQueen) {
                 return true;
             }
-            BishopStep.Rank += D.R;
-            BishopStep.File += D.F;
         }
     }
 
@@ -567,6 +570,11 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
         Coord RookStep = {Rank + D.R, File + D.F};
         while (!ch_isCoordOOB(RookStep)) {
             char P = ch_pieceAtCoord(BS, RookStep);
+            RookStep.Rank += D.R;
+            RookStep.File += D.F;
+            if (!P) {
+                continue;
+            }
             if (ByBlack && ch_isWhitePiece(P)) {
                 break;
             }
@@ -576,8 +584,6 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
             if (P == AttackerRook || P == AttackerQueen) {
                 return true;
             }
-            RookStep.Rank += D.R;
-            RookStep.File += D.F;
         }
     }
 

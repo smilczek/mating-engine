@@ -2,12 +2,12 @@
 #define _ENGINE_C_
 
 // Half moves.
-#define DEPTH 4
+#define ENGINE_DEPTH 4
 
 #define INFINITY (__builtin_inff())
 
 typedef struct {
-    Move Moves[DEPTH]; // White and Black
+    Move Moves[ENGINE_DEPTH]; // White and Black
     float Eval;
 } Sequence;
 
@@ -28,27 +28,46 @@ float en_evaluatePosition(BoardState *BS) {
     for (int R = 0; R < BOARDSIZE; ++R) {
         for (int F = 0; F < BOARDSIZE; ++F) {
             char P = ch_pieceAt(BS, R, F);
-            float BlackMul = ch_isBlackPiece(P) ? -1.0f : 1.0f;
             float PieceVal = 0.0f;
-            switch (lowercase(P)) {
-                case 'p': {
+            switch (P) {
+                case 'P': {
                     PieceVal = PAWN;
                     break;
                 }
-                case 'n': {
+                case 'N': {
                     PieceVal = KNIGHT;
                     break;
                 }
-                case 'b': {
+                case 'B': {
                     PieceVal = BISHOP;
                     break;
                 }
-                case 'r': {
+                case 'R': {
                     PieceVal = ROOK;
                     break;
                 }
-                case 'q': {
+                case 'Q': {
                     PieceVal = QUEEN;
+                    break;
+                }
+                case 'p': {
+                    PieceVal = -PAWN;
+                    break;
+                }
+                case 'n': {
+                    PieceVal = -KNIGHT;
+                    break;
+                }
+                case 'b': {
+                    PieceVal = -BISHOP;
+                    break;
+                }
+                case 'r': {
+                    PieceVal = -ROOK;
+                    break;
+                }
+                case 'q': {
+                    PieceVal = -QUEEN;
                     break;
                 }
                 default: {
@@ -56,7 +75,6 @@ float en_evaluatePosition(BoardState *BS) {
                     break;
                 }
             }
-            PieceVal *= BlackMul;
             Eval += PieceVal;
         }
     }
@@ -70,7 +88,7 @@ float en_evaluatePosition(BoardState *BS) {
 }
 
 Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth) {
-    if (Depth == DEPTH) {
+    if (Depth == ENGINE_DEPTH) {
         Seq.Eval = en_evaluatePosition(BS);
         return Seq;
     }
