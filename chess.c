@@ -550,15 +550,10 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
             if (!P) {
                 continue;
             }
-            if (ByBlack && ch_isWhitePiece(P)) {
-                break;
-            }
-            if (!ByBlack && ch_isBlackPiece(P)) {
-                break;
-            }
             if (P == AttackerBishop || P == AttackerQueen) {
                 return true;
             }
+            break;
         }
     }
 
@@ -575,15 +570,10 @@ static bool ch_squareIsAttacked(BoardState *BS, Coord Sqr, bool ByBlack) {
             if (!P) {
                 continue;
             }
-            if (ByBlack && ch_isWhitePiece(P)) {
-                break;
-            }
-            if (!ByBlack && ch_isBlackPiece(P)) {
-                break;
-            }
             if (P == AttackerRook || P == AttackerQueen) {
                 return true;
             }
+            break;
         }
     }
 
@@ -625,6 +615,11 @@ static bool ch_moveIsLegal(BoardState *BS, Move Mv) {
         return false;
     }
     return true;
+}
+
+static bool ch_inCheck(BoardState *BS) {
+    Coord KingCoord = ch_findKing(BS, !BS->BlackToMove);
+    return ch_squareIsAttacked(BS, KingCoord, !BS->BlackToMove);
 }
 
 MoveList ch_filterLegalMoves(BoardState *BS, MoveList *Pseudo) {

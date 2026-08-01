@@ -2,7 +2,7 @@
 #define _ENGINE_C_
 
 // Half moves.
-#define ENGINE_DEPTH 4
+#define ENGINE_DEPTH 6
 
 #define INFINITY (__builtin_inff())
 
@@ -87,7 +87,7 @@ float en_evaluatePosition(BoardState *BS) {
     return Eval;
 }
 
-Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth) {
+Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float Alpha, float Beta) {
     if (Depth == ENGINE_DEPTH) {
         Seq.Eval = en_evaluatePosition(BS);
         return Seq;
@@ -97,17 +97,37 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth) {
     Sequence CurrBestSeq = Seq;
     CurrBestSeq.Eval = BlackToMove ? INFINITY : -INFINITY;
     MoveList LegalMoves = ch_getLegalMoves(BS);
+    if (LegalMoves.Count == 0) {
+        if (!ch_inCheck(BS)) {
+            CurrBestSeq.Eval = 0.0f;
+            return CurrBestSeq;
+        }
+    }
     for (int I = 0; I < LegalMoves.Count; ++I) {
         Move Mv = LegalMoves.List[I];
 
         BoardState BSCopy = *BS;
         ch_applyMove(&BSCopy, Mv);
         Seq.Moves[Depth] = Mv;
-        Sequence CurrSeq = en_recurrentEvaluateMove(&BSCopy, Seq, Depth + 1);
+        Sequence CurrSeq = en_recurrentEvaluateMove(&BSCopy, Seq, Depth + 1, Alpha, Beta);
 
-        if (BlackToMove && CurrSeq.Eval < CurrBestSeq.Eval ||
-                !BlackToMove && CurrSeq.Eval > CurrBestSeq.Eval) {
-            CurrBestSeq = CurrSeq;
+        if (BlackToMove) {
+            if (CurrSeq.Eval < CurrBestSeq.Eval) {
+                CurrBestSeq = CurrSeq;
+            }
+            if (CurrBestSeq.Eval < Beta) {
+                Beta = CurrBestSeq.Eval;
+            }
+        } else {
+            if (CurrSeq.Eval > CurrBestSeq.Eval) {
+                CurrBestSeq = CurrSeq;
+            }
+            if (CurrBestSeq.Eval > Alpha) {
+                Alpha = CurrBestSeq.Eval;
+            }
+        }
+        if (Alpha >= Beta) {
+            break;
         }
     }
     return CurrBestSeq;
@@ -115,7 +135,8 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth) {
 
 SequenceList en_findBestSequence(BoardState *BS) {
     SequenceList SeqList = {0};
-    SeqList.List[0] = en_recurrentEvaluateMove(BS, (Sequence){0}, 0);
+    SeqList.List[0] = en_recurrentEvaluateMove(BS, (Sequence){0}, 0,
+            -INFINITY, INFINITY);
     return SeqList;
 }
 
