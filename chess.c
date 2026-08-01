@@ -622,17 +622,29 @@ static bool ch_inCheck(BoardState *BS) {
     return ch_squareIsAttacked(BS, KingCoord, !BS->BlackToMove);
 }
 
+// Ignores en passant.
+static bool ch_moveIsCapture(BoardState *BS, Move Mv) {
+    return ch_pieceAtCoord(BS, Mv.To);
+}
+
 MoveList ch_filterLegalMoves(BoardState *BS, MoveList *Pseudo) {
     MoveList Legal = {0};
+    MoveList Captures = {0};
 
     for (int i = 0; i < Pseudo->Count; ++i) {
         Move Mv = Pseudo->List[i];
         if (ch_moveIsLegal(BS, Mv)) {
-            ch_addMove(&Legal, Mv);
+            if (ch_moveIsCapture(BS, Mv)) {
+                ch_addMove(&Captures, Mv);
+            } else {
+                ch_addMove(&Legal, Mv);
+            }
         }
     }
-
-    return Legal;
+    for (int i = 0; i < Legal.Count; ++i) {
+        ch_addMove(&Captures, Legal.List[i]);
+    }
+    return Captures;
 }
 
 MoveList ch_getLegalMoves(BoardState *BS) {
