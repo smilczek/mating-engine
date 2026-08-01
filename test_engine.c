@@ -4,6 +4,8 @@
 #include "chess.c"
 #include "engine.c"
 
+#include <stdio.h>
+
 static bool test_findBestSequence() {
     bool Success = true;
     // The engine must make the obvious best moves.
@@ -37,6 +39,14 @@ static bool test_findBestSequence() {
     Success &= Seq.Moves[0].To.Rank == 0;
     Success &= Seq.Moves[0].To.File == 4;
 
+    // Mate in 1
+    BS = ch_parseFEN("8/6pk/4Q2p/P1q1PK1P/5PP1/8/8/8 b - - 0 50");
+    Seq = en_findBestSequence(&BS);
+    Success &= Seq.Moves[0].From.Rank == 4;
+    Success &= Seq.Moves[0].From.File == 2;
+    Success &= Seq.Moves[0].To.Rank == 1;
+    Success &= Seq.Moves[0].To.File == 2;
+
     return Success;
 }
 
@@ -45,6 +55,12 @@ int main() {
 
     Success &= test_findBestSequence();
     assert(Success);
+
+    if (Success) {
+        printf("Test engine success\n");
+    } else {
+        printf("Test engine fail!\n");
+    }
 
     return Success;
 }
