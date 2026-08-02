@@ -31,6 +31,14 @@ static bool test_findBestSequence() {
     Success &= Seq.Moves[0].To.Rank == 1;
     Success &= Seq.Moves[0].To.File == 3;
 
+    // Deflect king, capture queen
+    BS = ch_parseFEN("3Q4/8/5qp1/5pkp/8/7P/6P1/7K w - - 4 41");
+    Seq = en_findBestSequence(&BS);
+    Success &= Seq.Moves[0].From.Rank == 2;
+    Success &= Seq.Moves[0].From.File == 7;
+    Success &= Seq.Moves[0].To.Rank == 3;
+    Success &= Seq.Moves[0].To.File == 7;
+
     // Mate in 2
     BS = ch_parseFEN("6R1/4r2p/5ppk/1b6/1B3p2/1BP5/PP4PP/6K1 b - - 3 34");
     Seq = en_findBestSequence(&BS);
