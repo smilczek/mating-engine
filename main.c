@@ -10,6 +10,26 @@
 
 static const char *STARTING_POSITION_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+static char uppercase(char c) {
+    if (c >= 'a' && c <= 'z') {
+        return c + 'A' - 'a';
+    }
+    return c;
+}
+static void printMove(BoardState *BS, Move Mv) {
+    char P = uppercase(ch_pieceAtCoord(BS, Mv.From));
+    if (P != 'P') {
+        printf("%c", P);
+    }
+    if (ch_pieceAtCoord(BS, Mv.To)) {
+        if (P == 'P') {
+            printf("%c", ch_fileToChar(Mv.From.File));
+        }
+        printf("x");
+    }
+
+    printf("%c%c", ch_fileToChar(Mv.To.File), ch_rankToChar(Mv.To.Rank));
+}
 static void printBoardState(BoardState *BS) {
     for (int Rank = BOARDSIZE - 1; Rank > -1; --Rank) {
         for (int File = 0; File < BOARDSIZE; ++File) {
@@ -23,26 +43,20 @@ static void printBoardState(BoardState *BS) {
     }
 }
 
-static void printMove(BoardState *BS, Move Mv) {
-    char P = ch_pieceAtCoord(BS, Mv.From);
-    if (lowercase(P) != 'p') {
-        printf("%c", P);
-    }
-    printf("%c%c", ch_fileToChar(Mv.To.File), ch_rankToChar(Mv.To.Rank));
-}
-
 int main() {
-    // TODO(smilczek): There's a bug in saving the best sequence. It doesn't
-    //                 make sense after first move.
     BoardState BS = ch_parseFEN(STARTING_POSITION_FEN);
-    Sequence Seq = en_findBestSequence(&BS);
-    for (int i = 0; i < arr_len(Seq.Moves); i += 2) {
-        printf("%d. ", (i + 2 / 2));
-        printMove(&BS, Seq.Moves[i]);
+    printf("%d. ", 1);
+    for (int i = 0; i < 100; ++i) {
+        Sequence Seq = en_findBestSequence(&BS);
+        printMove(&BS, Seq.Moves[0]);
         printf(" ");
-        printMove(&BS, Seq.Moves[i + 1]);
-        printf(" ");
+        ch_applyMove(&BS, Seq.Moves[0]);
+        if (i % 2 == 1) {
+            printf("\n%d. ", i / 2 + 2);
+        }
     }
     printf("\n");
+    printBoardState(&BS);
+
     return 0;
 }
