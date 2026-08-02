@@ -1,9 +1,11 @@
-#include <assert.h>
 #include "base.h"
+
+#include <assert.h>
+
 #include "chess.h"
 #include "chess.c"
-#include "string.h"
 
+#include <string.h>
 #include <stdio.h>
 
 // helper for debugging

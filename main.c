@@ -1,5 +1,7 @@
-#include <assert.h>
 #include "base.h"
+
+#include <assert.h>
+
 #include "chess.h"
 #include "chess.c"
 #include "engine.c"
@@ -30,7 +32,8 @@ static void printMove(BoardState *BS, Move Mv) {
 }
 
 int main() {
-    // BoardState BS = ch_parseFEN("6R1/4r2p/5ppk/1b6/1B3p2/1BP5/PP4PP/6K1 b - - 3 34");
+    // TODO(smilczek): There's a bug in saving the best sequence. It doesn't
+    //                 make sense after first move.
     BoardState BS = ch_parseFEN(STARTING_POSITION_FEN);
     Sequence Seq = en_findBestSequence(&BS);
     for (int i = 0; i < arr_len(Seq.Moves); i += 2) {
