@@ -293,6 +293,12 @@ static bool test_applyMove() {
     Success &= ch_pieceAtCoord(&BS, (Coord){2, 6}) == 'p';
     Success &= ch_pieceAtCoord(&BS, (Coord){3, 5}) == '\0';
 
+    BS = ch_parseFEN("8/1PK5/8/8/4k3/8/8/8 w - - 0 1");
+    Mv = (Move){{6, 1}, {7, 1}, 'N'};
+    ch_applyMove(&BS, Mv);
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 1}) == 'N';
+    Success &= ch_pieceAtCoord(&BS, (Coord){6, 1}) == '\0';
+
     return Success;
 }
 

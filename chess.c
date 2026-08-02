@@ -408,6 +408,9 @@ static void ch_applyMove(BoardState *BS, Move Mv) {
     bool IsEnPassant = ch_moveIsEnPassant(BS, Mv);
     BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
     BS->Board[Mv.To.Rank][Mv.To.File] = P;
+    if (Mv.Promotion) {
+        BS->Board[Mv.To.Rank][Mv.To.File] = Mv.Promotion;
+    }
 
     if (IsEnPassant) {
         // The pawn that used to be next to our pawn.
