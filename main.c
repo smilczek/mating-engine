@@ -10,12 +10,6 @@
 
 static const char *STARTING_POSITION_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-static char uppercase(char c) {
-    if (c >= 'a' && c <= 'z') {
-        return c + 'A' - 'a';
-    }
-    return c;
-}
 static void printMove(BoardState *BS, Move Mv) {
     char P = uppercase(ch_pieceAtCoord(BS, Mv.From));
     if (P != 'P') {

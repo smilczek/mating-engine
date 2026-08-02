@@ -64,7 +64,7 @@ static bool test_findBestSequence() {
     Success &= Seq.Moves[0].From.File == 1;
     Success &= Seq.Moves[0].To.Rank == 7;
     Success &= Seq.Moves[0].To.File == 1;
-    Success &= Seq.Moves[0].Promotion == 'Q';
+    Success &= lowercase(Seq.Moves[0].Promotion) == 'q';
 
     return Success;
 }

@@ -7,6 +7,12 @@ static char lowercase(char c) {
     }
     return c;
 }
+static char uppercase(char c) {
+    if (c >= 'a' && c <= 'z') {
+        return c + 'A' - 'a';
+    }
+    return c;
+}
 
 static bool ch_isWhitePiece(char P) {
     return P >= 'A' && P <= 'Z';
@@ -408,8 +414,10 @@ static void ch_applyMove(BoardState *BS, Move Mv) {
     bool IsEnPassant = ch_moveIsEnPassant(BS, Mv);
     BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
     BS->Board[Mv.To.Rank][Mv.To.File] = P;
+
     if (Mv.Promotion) {
-        BS->Board[Mv.To.Rank][Mv.To.File] = Mv.Promotion;
+        BS->Board[Mv.To.Rank][Mv.To.File] =
+            BS->BlackToMove ? Mv.Promotion : uppercase(Mv.Promotion);
     }
 
     if (IsEnPassant) {
