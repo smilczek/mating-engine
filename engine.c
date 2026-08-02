@@ -6,7 +6,7 @@
 
 #define INFINITY (__builtin_inff())
 
-#define ABS(x) (x < 0.0f ? -x : x)
+#define ABS(x) (((x) < 0.0f) ? -(x) : (x))
 
 typedef struct {
     Move Moves[ENGINE_DEPTH]; // White and Black
@@ -26,6 +26,9 @@ float en_evaluatePosition(BoardState *BS) {
     for (int R = 0; R < BOARDSIZE; ++R) {
         for (int F = 0; F < BOARDSIZE; ++F) {
             char P = ch_pieceAt(BS, R, F);
+            if (!P) {
+                continue;
+            }
             float PieceVal = 0.0f;
             switch (P) {
                 case 'P': {
