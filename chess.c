@@ -150,7 +150,7 @@ static BoardState ch_parseFEN(const char *FENStr) {
     FENStr++;
     // FullmoveNumber
     BS.FullmoveNumber = 0;
-    while (*FENStr) {
+    while (*FENStr && *FENStr >= '0' && *FENStr <= '9') {
         BS.FullmoveNumber *= 10;
         char Digit = *FENStr++;
         BS.FullmoveNumber += Digit - '0';
