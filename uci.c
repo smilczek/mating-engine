@@ -60,14 +60,26 @@ static bool uci_isTokenChar(char c) {
     return c >= 'a' && c <= 'z';
 }
 
+static void logBoardState(BoardState *BS) {
+    for (int Rank = BOARDSIZE - 1; Rank > -1; --Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            char Square = BS->Board[Rank][File];
+            if (Square == '\0') {
+                Square = '.';
+            }
+            fprintf(stderr, "%c", Square);
+        }
+        fprintf(stderr, "\n");
+    }
+}
+
 int main() {
+    setvbuf(stdout, NULL, _IONBF, 0);
     bool Running = true;
     char InputBuf[4096] = {0};
     BoardState BS = {0};
     while (Running) {
-        if (!fgets(InputBuf, sizeof(InputBuf), stdin)) {
-            continue;
-        };
+        if (!fgets(InputBuf, sizeof(InputBuf), stdin)) break;
         if (strncmp(InputBuf, "uci", 3) == 0 && !uci_isTokenChar(InputBuf[3])) {
             printf("id name Mating Engine\n");
             printf("id author smilczek\n");
@@ -80,6 +92,7 @@ int main() {
             char *Args = InputBuf + 8;
             while (*Args == ' ') ++Args;
             uci_handlePosition(&BS, Args);
+            logBoardState(&BS);
         } else if (strncmp(InputBuf, "go", 2) == 0) {
             Sequence Seq = en_findBestSequence(&BS);
             printf("bestmove ");
