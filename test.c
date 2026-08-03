@@ -298,6 +298,13 @@ static bool test_applyMove() {
     Success &= ch_pieceAtCoord(&BS, (Coord){7, 1}) == 'N';
     Success &= ch_pieceAtCoord(&BS, (Coord){6, 1}) == '\0';
 
+    BS = ch_parseFEN("r2qk2r/pppb1ppp/2nb1n2/1B1pp1Q1/N7/4P3/PPPPNPPP/R1B2K1R b kq - 11 8");
+    Mv = (Move){{7, 4}, {7, 6}};
+    ch_applyMove(&BS, Mv);
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 5}) == 'r';
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 6}) == 'k';
+    Success &= ch_pieceAtCoord(&BS, (Coord){7, 7}) == '\0';
+
     return Success;
 }
 

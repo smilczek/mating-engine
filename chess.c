@@ -412,6 +412,7 @@ static bool ch_moveIsEnPassant(BoardState *BS, Move Mv) {
 static void ch_applyMove(BoardState *BS, Move Mv) {
     char P = BS->Board[Mv.From.Rank][Mv.From.File];
     bool IsEnPassant = ch_moveIsEnPassant(BS, Mv);
+    bool IsCastling = ch_moveIsCastling(BS, Mv);
     BS->Board[Mv.From.Rank][Mv.From.File] = '\0';
     BS->Board[Mv.To.Rank][Mv.To.File] = P;
 
@@ -474,7 +475,7 @@ static void ch_applyMove(BoardState *BS, Move Mv) {
         }
     }
 
-    if (ch_moveIsCastling(BS, Mv)) {
+    if (IsCastling) {
         if (Mv.To.File == 2) {
             int RookFromFile = 0;
             int RookToFile = 3;
