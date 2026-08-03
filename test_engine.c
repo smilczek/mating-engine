@@ -56,6 +56,17 @@ static bool test_findBestSequence() {
     Success &= Seq.Moves[0].To.Rank == 1;
     Success &= Seq.Moves[0].To.File == 2;
 
+    BS = ch_parseFEN("7r/1R5p/1N1k2p1/8/1PPN1PP1/2K5/7P/8 w - - 0 46");
+    Seq = en_findBestSequence(&BS);
+    Success &= (Seq.Moves[0].From.Rank == 3 &&
+                Seq.Moves[0].From.File == 2 &&
+                Seq.Moves[0].To.Rank == 4 &&
+                Seq.Moves[0].To.File == 2) ||
+               (Seq.Moves[0].From.Rank == 6 &&
+                Seq.Moves[0].From.File == 1 &&
+                Seq.Moves[0].To.Rank == 6 &&
+                Seq.Moves[0].To.File == 3);
+
     // Promote pawn
     BS = ch_parseFEN("8/1PK5/8/8/4k3/8/8/8 w - - 0 1");
     Seq = en_findBestSequence(&BS);

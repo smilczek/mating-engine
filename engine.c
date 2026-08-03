@@ -9,6 +9,7 @@
 #define ABS(x) (((x) < 0.0f) ? -(x) : (x))
 
 typedef struct {
+    int Depth;
     Move Moves[ENGINE_DEPTH]; // White and Black
     float Eval;
 } Sequence;
@@ -95,6 +96,7 @@ float en_evaluatePosition(BoardState *BS) {
 
 Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float Alpha, float Beta) {
     if (Depth == ENGINE_DEPTH) {
+        Seq.Depth = Depth;
         Seq.Eval = en_evaluatePosition(BS);
         return Seq;
     }
@@ -102,6 +104,7 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
 
     Sequence CurrBestSeq = Seq;
     CurrBestSeq.Eval = BlackToMove ? INFINITY : -INFINITY;
+    CurrBestSeq.Depth = Depth;
     MoveList LegalMoves = ch_getLegalMoves(BS);
     if (LegalMoves.Count == 0) {
         if (!ch_inCheck(BS)) {
@@ -120,6 +123,14 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
         if (BlackToMove) {
             if (CurrSeq.Eval < CurrBestSeq.Eval) {
                 CurrBestSeq = CurrSeq;
+            } else if (CurrSeq.Eval == INFINITY && CurrBestSeq.Eval == INFINITY) {
+                if (CurrSeq.Depth > CurrBestSeq.Depth) {
+                    CurrBestSeq = CurrSeq;
+                }
+            } else if (CurrSeq.Eval == -INFINITY && CurrBestSeq.Eval == -INFINITY) {
+                if (CurrSeq.Depth < CurrBestSeq.Depth) {
+                    CurrBestSeq = CurrSeq;
+                }
             }
             if (CurrBestSeq.Eval < Beta) {
                 Beta = CurrBestSeq.Eval;
@@ -127,12 +138,20 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
         } else {
             if (CurrSeq.Eval > CurrBestSeq.Eval) {
                 CurrBestSeq = CurrSeq;
+            } else if (CurrSeq.Eval == -INFINITY && CurrBestSeq.Eval == -INFINITY) {
+                if (CurrSeq.Depth > CurrBestSeq.Depth) {
+                    CurrBestSeq = CurrSeq;
+                }
+            } else if (CurrSeq.Eval == INFINITY && CurrBestSeq.Eval == INFINITY) {
+                if (CurrSeq.Depth < CurrBestSeq.Depth) {
+                    CurrBestSeq = CurrSeq;
+                }
             }
             if (CurrBestSeq.Eval > Alpha) {
                 Alpha = CurrBestSeq.Eval;
             }
         }
-        if (Alpha >= Beta) {
+        if (Alpha > Beta) {
             break;
         }
     }
