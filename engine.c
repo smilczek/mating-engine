@@ -33,7 +33,7 @@ float en_evaluatePosition(BoardState *BS) {
             float PieceVal = 0.0f;
             switch (P) {
                 case 'P': {
-                    PieceVal = PAWN;
+                    PieceVal = PAWN + (float)(R - 1) / 4.0f;
                     break;
                 }
                 case 'N': {
@@ -53,7 +53,7 @@ float en_evaluatePosition(BoardState *BS) {
                     break;
                 }
                 case 'p': {
-                    PieceVal = -PAWN;
+                    PieceVal = -PAWN - (float)(7 - R) / 4.0f;
                     break;
                 }
                 case 'n': {
