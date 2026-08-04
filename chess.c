@@ -432,10 +432,14 @@ static void ch_applyMove(BoardState *BS, Move Mv) {
     if (lowercase(P) == 'p') {
         int Distance = Mv.To.Rank - Mv.From.Rank;
         int AbsDistance = Distance < 0 ? -Distance : Distance;
+        char EnemyPawn = BS->BlackToMove ? 'P' : 'p';
         if (AbsDistance == 2) {
-            int EPRank = Mv.To.Rank - (Distance / 2);
-            BS->EnPassant[0] = ch_fileToChar(Mv.To.File);
-            BS->EnPassant[1] = ch_rankToChar(EPRank);
+            if ((Mv.To.File != 0 && ch_pieceAt(BS, Mv.To.Rank, Mv.To.File - 1) == EnemyPawn) ||
+                    (Mv.To.File != 7 &&ch_pieceAt(BS, Mv.To.Rank, Mv.To.File + 1) == EnemyPawn)) {
+                int EPRank = Mv.To.Rank - (Distance / 2);
+                BS->EnPassant[0] = ch_fileToChar(Mv.To.File);
+                BS->EnPassant[1] = ch_rankToChar(EPRank);
+            }
         }
     }
 

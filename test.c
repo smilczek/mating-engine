@@ -263,15 +263,15 @@ static bool test_applyMove() {
     ch_applyMove(&BS, Mv);
     Success &= ch_pieceAtCoord(&BS, Mv.To) == 'P';
     Success &= ch_pieceAtCoord(&BS, Mv.From) == '\0';
-    Success &= BS.EnPassant[0] == 'e';
-    Success &= BS.EnPassant[1] == '3';
+    Success &= BS.EnPassant[0] == '\0';
+    Success &= BS.EnPassant[1] == '\0';
     Success &= BS.BlackToMove == true;
     Success &= BS.CR_WK && BS.CR_WQ && BS.CR_BK && BS.CR_BQ;
 
     Mv = (Move){{6, 4}, {4, 4}};
     ch_applyMove(&BS, Mv);
-    Success &= BS.EnPassant[0] == 'e';
-    Success &= BS.EnPassant[1] == '6';
+    Success &= BS.EnPassant[0] == '\0';
+    Success &= BS.EnPassant[1] == '\0';
 
     Mv = (Move){{0, 4}, {1, 4}};
     ch_applyMove(&BS, Mv);
@@ -304,6 +304,17 @@ static bool test_applyMove() {
     Success &= ch_pieceAtCoord(&BS, (Coord){7, 5}) == 'r';
     Success &= ch_pieceAtCoord(&BS, (Coord){7, 6}) == 'k';
     Success &= ch_pieceAtCoord(&BS, (Coord){7, 7}) == '\0';
+
+    // En passant
+    BS = ch_parseFEN("rnbqkbnr/pppppppp/8/4P3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    Mv = (Move){{6, 3}, {4, 3}};
+    ch_applyMove(&BS, Mv);
+    Success &= ch_pieceAtCoord(&BS, Mv.To) == 'p';
+    Success &= ch_pieceAtCoord(&BS, Mv.From) == '\0';
+    Success &= BS.EnPassant[0] == 'd';
+    Success &= BS.EnPassant[1] == '6';
+    Success &= BS.BlackToMove == false;
+    Success &= BS.CR_WK && BS.CR_WQ && BS.CR_BK && BS.CR_BQ;
 
     return Success;
 }
