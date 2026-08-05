@@ -48,6 +48,25 @@ static bool ch_isEnemy(BoardState *BS, char P) {
     return BS->BlackToMove ? ch_isWhitePiece(P) : ch_isBlackPiece(P);
 }
 
+static int ch_getNumWhitePieces(BoardState *BS) {
+    int Num = 0;
+    for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            if (ch_isWhitePiece(BS->Board[Rank][File])) Num++;
+        }
+    }
+    return Num;
+}
+static int ch_getNumBlackPieces(BoardState *BS) {
+    int Num = 0;
+    for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            if (ch_isBlackPiece(BS->Board[Rank][File])) Num++;
+        }
+    }
+    return Num;
+}
+
 static int ch_getNumPiecesOnBoard(BoardState *BS) {
     int Num = 0;
     for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {

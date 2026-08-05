@@ -22,6 +22,10 @@ float QUEEN  = 9.0f;
 
 float en_evaluatePosition(BoardState *BS) {
     float Eval = 0.0f;
+    float TotalBlackPosVal = 0.0f;
+    float NumOfBlack = (float)ch_getNumBlackPieces(BS);
+    float TotalWhitePosVal = 0.0f;
+    float NumOfWhite = (float)ch_getNumWhitePieces(BS);
     for (int R = 0; R < BOARDSIZE; ++R) {
         for (int F = 0; F < BOARDSIZE; ++F) {
             char P = ch_pieceAt(BS, R, F);
@@ -33,7 +37,7 @@ float en_evaluatePosition(BoardState *BS) {
                 case 'p': {
                     PieceVal = PAWN +
                         (ch_isBlackPiece(P) ? (float)(6 - R) : (float)(R - 1)) /
-                        4.0f;
+                        6.0f;
                     break;
                 }
                 case 'n': {
@@ -60,17 +64,24 @@ float en_evaluatePosition(BoardState *BS) {
             if (ch_getNumPiecesOnBoard(BS) < 8) PieceVal *= 2.0f;
             float BlackMultiplier = ch_isBlackPiece(P) ? -1.0f : 1.0f;
 
-            float HalfBoard = (float)BOARDSIZE / 2.0f;
+            float HalfBoard = (float)(BOARDSIZE - 1) / 2.0f;
             float PiecePosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
                                 (HalfBoard - ABS((float)F - HalfBoard));
+            PiecePosVal *= 4.0f;
 
-            PiecePosVal /= 8.0f;
+            if (ch_isBlackPiece(P)) {
+                TotalBlackPosVal -= PiecePosVal;
+            } else {
+                TotalWhitePosVal += PiecePosVal;
+            }
 
-            float TotalPieceEval = (PiecePosVal + PieceVal) * BlackMultiplier;
+            float TotalPieceEval = (PieceVal) * BlackMultiplier;
 
             Eval += TotalPieceEval;
         }
     }
+    Eval += (TotalBlackPosVal / NumOfBlack +
+            TotalWhitePosVal / NumOfWhite);
     return Eval;
 }
 
