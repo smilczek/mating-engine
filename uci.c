@@ -73,6 +73,33 @@ static void logBoardState(BoardState *BS) {
     }
 }
 
+static void logMove(BoardState *BS, Move Mv) {
+    char P = uppercase(ch_pieceAtCoord(BS, Mv.From));
+    if (P != 'P') {
+        fprintf(stderr, "%c", P);
+    }
+    if (ch_pieceAtCoord(BS, Mv.To)) {
+        if (P == 'P') {
+            fprintf(stderr, "%c", ch_fileToChar(Mv.From.File));
+        }
+        fprintf(stderr, "x");
+    }
+
+    fprintf(stderr, "%c%c", ch_fileToChar(Mv.To.File), ch_rankToChar(Mv.To.Rank));
+}
+static void logSequence(BoardState *BS, Sequence *Seq) {
+    for (int i = 0; i < Seq->Depth; ++i) {
+        if (i % 2 == 0) {
+            fprintf(stderr, "%d. ", i / 2 + 1);
+        }
+        logMove(BS, Seq->Moves[i]);
+        fprintf(stderr, " ");
+        ch_applyMove(BS, Seq->Moves[i]);
+    }
+    fprintf(stderr, "\n Depth: %d", Seq->Depth);
+    fprintf(stderr, "\n Var Eval: %f\n", Seq->Eval);
+}
+
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
     bool Running = true;
@@ -95,6 +122,8 @@ int main() {
             logBoardState(&BS);
         } else if (strncmp(InputBuf, "go", 2) == 0) {
             Sequence Seq = en_findBestSequence(&BS);
+            BoardState BSCopy = BS;
+            logSequence(&BSCopy, &Seq);
             printf("bestmove ");
             uci_emitMove(Seq.Moves[0]);
             printf("\n");
