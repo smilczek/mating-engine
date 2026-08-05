@@ -68,13 +68,21 @@ static bool test_findBestSequence() {
                 Seq.Moves[0].To.File == 3);
 
     // Promote pawn
-    BS = ch_parseFEN("8/1PK5/8/8/4k3/8/8/8 w - - 0 1");
+    BS = ch_parseFEN("8/k7/3P4/8/8/8/5K2/8 w - - 0 1");
+    Seq = en_findBestSequence(&BS);
+    Success &= Seq.Moves[0].From.Rank == 5;
+    Success &= Seq.Moves[0].From.File == 3;
+    Success &= Seq.Moves[0].To.Rank == 6;
+    Success &= Seq.Moves[0].To.File == 3;
+    Success &= lowercase(Seq.Moves[2].Promotion) == 'q';
+
+    // Drawn pawn position
+    BS = ch_parseFEN("8/3k4/3P4/3K4/8/8/8/8 b - - 0 1");
     Seq = en_findBestSequence(&BS);
     Success &= Seq.Moves[0].From.Rank == 6;
-    Success &= Seq.Moves[0].From.File == 1;
+    Success &= Seq.Moves[0].From.File == 3;
     Success &= Seq.Moves[0].To.Rank == 7;
-    Success &= Seq.Moves[0].To.File == 1;
-    Success &= lowercase(Seq.Moves[0].Promotion) == 'q';
+    Success &= Seq.Moves[0].To.File == 3;
 
     return Success;
 }

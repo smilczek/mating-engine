@@ -48,6 +48,26 @@ static bool ch_isEnemy(BoardState *BS, char P) {
     return BS->BlackToMove ? ch_isWhitePiece(P) : ch_isBlackPiece(P);
 }
 
+static int ch_getNumPiecesOnBoard(BoardState *BS) {
+    int Num = 0;
+    for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            if (BS->Board[Rank][File]) Num++;
+        }
+    }
+    return Num;
+}
+
+bool ch_isOnePieceEndgame(BoardState *BS) {
+    for (int Rank = 0; Rank < BOARDSIZE; ++Rank) {
+        for (int File = 0; File < BOARDSIZE; ++File) {
+            if (lowercase(BS->Board[Rank][File]) == 'p')
+                return false;
+        }
+    }
+    return ch_getNumPiecesOnBoard(BS) == 3;
+}
+
 
 // Parse coord like e4, b2 etc.
 // 2 chars always.

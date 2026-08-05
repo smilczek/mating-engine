@@ -2,7 +2,7 @@
 #define _ENGINE_C_
 
 // Half moves.
-#define ENGINE_DEPTH 6
+#define MAX_DEPTH 16
 
 #define INFINITY (__builtin_inff())
 
@@ -10,19 +10,17 @@
 
 typedef struct {
     int Depth;
-    Move Moves[ENGINE_DEPTH]; // White and Black
+    Move Moves[MAX_DEPTH]; // White and Black
     float Eval;
 } Sequence;
 
+float PAWN   = 1.0f;
+float KNIGHT = 3.0f;
+float BISHOP = 3.0f;
+float ROOK   = 5.0f;
+float QUEEN  = 9.0f;
+
 float en_evaluatePosition(BoardState *BS) {
-    // TODO(smilczek): Test if counting the legal moves for
-    //                 each side is also a valid eval strat.
-    //                 (The diff MyMoves - TheirMoves)
-    float PAWN   = 1.0f;
-    float KNIGHT = 3.0f;
-    float BISHOP = 3.0f;
-    float ROOK   = 5.0f;
-    float QUEEN  = 9.0f;
     float Eval = 0.0f;
     for (int R = 0; R < BOARDSIZE; ++R) {
         for (int F = 0; F < BOARDSIZE; ++F) {
@@ -31,45 +29,27 @@ float en_evaluatePosition(BoardState *BS) {
                 continue;
             }
             float PieceVal = 0.0f;
-            switch (P) {
-                case 'P': {
-                    PieceVal = PAWN + (float)(R - 1) / 4.0f;
-                    break;
-                }
-                case 'N': {
-                    PieceVal = KNIGHT;
-                    break;
-                }
-                case 'B': {
-                    PieceVal = BISHOP;
-                    break;
-                }
-                case 'R': {
-                    PieceVal = ROOK;
-                    break;
-                }
-                case 'Q': {
-                    PieceVal = QUEEN;
-                    break;
-                }
+            switch (lowercase(P)) {
                 case 'p': {
-                    PieceVal = -PAWN - (float)(7 - R) / 4.0f;
+                    PieceVal = PAWN +
+                        (ch_isBlackPiece(P) ? (float)(6 - R) : (float)(R - 1)) /
+                        4.0f;
                     break;
                 }
                 case 'n': {
-                    PieceVal = -KNIGHT;
+                    PieceVal = KNIGHT;
                     break;
                 }
                 case 'b': {
-                    PieceVal = -BISHOP;
+                    PieceVal = BISHOP;
                     break;
                 }
                 case 'r': {
-                    PieceVal = -ROOK;
+                    PieceVal = ROOK;
                     break;
                 }
                 case 'q': {
-                    PieceVal = -QUEEN;
+                    PieceVal = QUEEN;
                     break;
                 }
                 default: {
@@ -77,34 +57,81 @@ float en_evaluatePosition(BoardState *BS) {
                     break;
                 }
             }
+            if (ch_getNumPiecesOnBoard(BS) < 8) PieceVal *= 2.0f;
+            float BlackMultiplier = ch_isBlackPiece(P) ? -1.0f : 1.0f;
+
             float HalfBoard = (float)BOARDSIZE / 2.0f;
             float PiecePosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
                                 (HalfBoard - ABS((float)F - HalfBoard));
+
             PiecePosVal /= 8.0f;
-            Eval += PiecePosVal;
-            Eval += PieceVal;
+
+            float TotalPieceEval = (PiecePosVal + PieceVal) * BlackMultiplier;
+
+            Eval += TotalPieceEval;
         }
     }
-    // BoardState BSCopy = *BS;
-    // BSCopy.BlackToMove = false;
-    // MoveList WhiteMoves = ch_generatePseudoLegalMoves(&BSCopy);
-    // BSCopy.BlackToMove = true;
-    // MoveList BlackMoves = ch_generatePseudoLegalMoves(&BSCopy);
-    // return (float)(WhiteMoves.Count - BlackMoves.Count);
     return Eval;
 }
 
-Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float Alpha, float Beta) {
-    if (Depth == ENGINE_DEPTH) {
-        Seq.Depth = Depth;
-        Seq.Eval = en_evaluatePosition(BS);
+static float en_evaluateOnePieceEndgamePosition(BoardState *BS) {
+    // How close is opponent's king to the side?
+    // How close are Pawns to queening?
+    // How close is your king to your pawns?
+    Coord BlackKing = {0};
+    Coord WhiteKing = {0};
+    bool BlackWinning = false;
+    for (int R = 0; R < BOARDSIZE; ++R) {
+        for (int F = 0; F < BOARDSIZE; ++F) {
+            char P = ch_pieceAt(BS, R, F);
+            if (!P) continue;
+            if (P == 'k')
+                BlackKing = (Coord){R, F};
+            else if (P == 'K')
+                WhiteKing = (Coord){R, F};
+            else if (ch_isBlackPiece(P))
+                BlackWinning = true;
+        }
+    }
+    float Eval = 0.0f;
+    if (BlackWinning) {
+        int R = WhiteKing.Rank;
+        int F = WhiteKing.File;
+        float HalfBoard = (float)BOARDSIZE / 2.0f;
+        float KingPosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
+            (HalfBoard - ABS((float)F - HalfBoard));
+        BoardState BSCopy = *BS;
+        BSCopy.BlackToMove = false;
+        MoveList LegalMoves = ch_getLegalMoves(&BSCopy);
+        Eval += KingPosVal;
+        Eval += (float)LegalMoves.Count / 2.0f;
+
+    } else {
+        int R = BlackKing.Rank;
+        int F = BlackKing.File;
+        float HalfBoard = (float)BOARDSIZE / 2.0f;
+        float KingPosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
+            (HalfBoard - ABS((float)F - HalfBoard));
+        BoardState BSCopy = *BS;
+        BSCopy.BlackToMove = true;
+        MoveList LegalMoves = ch_getLegalMoves(&BSCopy);
+        Eval -= KingPosVal;
+        Eval -= (float)LegalMoves.Count / 2.0f;
+    }
+
+    return Eval;
+}
+
+Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float Alpha, float Beta, float (*EvalFunc)(BoardState *)) {
+    if (Depth == 0) {
+        Seq.Eval = EvalFunc(BS);
         return Seq;
     }
     bool BlackToMove = BS->BlackToMove;
 
+    Seq.Depth++;
     Sequence CurrBestSeq = Seq;
     CurrBestSeq.Eval = BlackToMove ? INFINITY : -INFINITY;
-    CurrBestSeq.Depth = Depth;
     MoveList LegalMoves = ch_getLegalMoves(BS);
     if (LegalMoves.Count == 0) {
         if (!ch_inCheck(BS)) {
@@ -117,8 +144,8 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
 
         BoardState BSCopy = *BS;
         ch_applyMove(&BSCopy, Mv);
-        Seq.Moves[Depth] = Mv;
-        Sequence CurrSeq = en_recurrentEvaluateMove(&BSCopy, Seq, Depth + 1, Alpha, Beta);
+        Seq.Moves[Seq.Depth - 1] = Mv;
+        Sequence CurrSeq = en_recurrentEvaluateMove(&BSCopy, Seq, Depth - 1, Alpha, Beta, EvalFunc);
 
         if (BlackToMove) {
             if (CurrSeq.Eval < CurrBestSeq.Eval) {
@@ -159,8 +186,14 @@ Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float
 }
 
 Sequence en_findBestSequence(BoardState *BS) {
-    Sequence Seq = en_recurrentEvaluateMove(BS, (Sequence){0}, 0,
-            -INFINITY, INFINITY);
+    int Depth = 6;
+    Sequence Seq = {0};
+    if (ch_isOnePieceEndgame(BS))
+        Seq = en_recurrentEvaluateMove(BS, (Sequence){0}, Depth + 2,
+                -INFINITY, INFINITY, en_evaluateOnePieceEndgamePosition);
+    else
+        Seq = en_recurrentEvaluateMove(BS, (Sequence){0}, Depth,
+                -INFINITY, INFINITY, en_evaluatePosition);
     return Seq;
 }
 
