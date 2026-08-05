@@ -2,20 +2,33 @@
 
 The best chess engine.
 
-## Current plans
-Searches recursively through every legal move.
+## Build
+```bash
+./build.sh
+```
+Requires gcc.
 
-Depth to be determined
+## Current state
+### Move searching
+Searches recursively through legal moves.
+Uses simple Alpha Beta pruning.
 
-Simple evaluation by counting pieces.
+### Depth
+Depth set to 3 full moves unless in a single piece endgame.
+Single piece endgames use 4 full moves depth.
+
+### Eval funcs
+Simple evaluation by counting pieces, with position on board taken into
+account.
+
+Single piece endgames use different evalution which encourages pushing the enemy
+king to the edge of the board.
 
 ## Files
-chess.c - chess board, moves verification etc.
-
-test.c - tests for logic.
-
-main.c - i/o handling
+`chess.c` - chess board, moves verification etc.
+`test.c` - tests for chess logic.
+`test_engine.c` - tests for engine logic.
+`uci.c` - UCI interface layer.
 
 ## TODO
 - TODO.md
-- engine.c

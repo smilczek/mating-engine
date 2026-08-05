@@ -38,6 +38,10 @@ static void printBoardState(BoardState *BS) {
 
 int main() {
     BoardState BS = ch_parseFEN(STARTING_POSITION_FEN);
+    BS = ch_parseFEN("4r2Q/3k1pp1/2N2n2/2P3p1/1BPPp3/Pq2P2P/3K1R2/8 w - - 1 42");
+    Sequence Seq = en_findBestSequence(&BS);
+    printMove(&BS, Seq.Moves[0]);
+    return 0;
     printf("%d. ", 1);
     for (int i = 0; i < 100; ++i) {
         Sequence Seq = en_findBestSequence(&BS);
