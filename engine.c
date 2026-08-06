@@ -63,11 +63,12 @@ float en_evaluatePosition(BoardState *BS) {
             }
             if (ch_getNumPiecesOnBoard(BS) < 8) PieceVal *= 2.0f;
             float BlackMultiplier = ch_isBlackPiece(P) ? -1.0f : 1.0f;
-
             float HalfBoard = (float)(BOARDSIZE - 1) / 2.0f;
-            float PiecePosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
-                                (HalfBoard - ABS((float)F - HalfBoard));
-            PiecePosVal *= 4.0f;
+            float RankPosVal = (HalfBoard - ABS((float)R - HalfBoard));
+            float FilePosVal = (HalfBoard - ABS((float)F - HalfBoard));
+            float PiecePosVal = RankPosVal + FilePosVal;
+            PiecePosVal *= PiecePosVal;
+            PiecePosVal /= 4.0f;
 
             if (ch_isBlackPiece(P)) {
                 TotalBlackPosVal -= PiecePosVal;
