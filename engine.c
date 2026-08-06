@@ -37,7 +37,7 @@ float en_evaluatePosition(BoardState *BS) {
                 case 'p': {
                     PieceVal = PAWN +
                         (ch_isBlackPiece(P) ? (float)(6 - R) : (float)(R - 1)) /
-                        6.0f;
+                        8.0f;
                     break;
                 }
                 case 'n': {
