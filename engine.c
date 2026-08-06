@@ -111,32 +111,22 @@ static float en_evaluateOnePieceEndgamePosition(BoardState *BS) {
         }
     }
     float Eval = 0.0f;
+    Coord HuntedKing = BlackKing;
     if (BlackWinning) {
-        int R = WhiteKing.Rank;
-        int F = WhiteKing.File;
-        float HalfBoard = (float)BOARDSIZE / 2.0f;
-        float KingPosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
-            (HalfBoard - ABS((float)F - HalfBoard));
-        BoardState BSCopy = *BS;
-        BSCopy.BlackToMove = false;
-        MoveList LegalMoves = ch_getLegalMoves(&BSCopy);
-        Eval += KingPosVal;
-        Eval += (float)LegalMoves.Count / 2.0f;
-
-    } else {
-        int R = BlackKing.Rank;
-        int F = BlackKing.File;
-        float HalfBoard = (float)BOARDSIZE / 2.0f;
-        float KingPosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
-            (HalfBoard - ABS((float)F - HalfBoard));
-        BoardState BSCopy = *BS;
-        BSCopy.BlackToMove = true;
-        MoveList LegalMoves = ch_getLegalMoves(&BSCopy);
-        Eval -= KingPosVal;
-        Eval -= (float)LegalMoves.Count / 2.0f;
+        HuntedKing = WhiteKing;
     }
+    int R = HuntedKing.Rank;
+    int F = HuntedKing.File;
+    float HalfBoard = (float)BOARDSIZE / 2.0f;
+    float KingPosVal = (HalfBoard - ABS((float)R - HalfBoard)) +
+        (HalfBoard - ABS((float)F - HalfBoard));
+    BoardState BSCopy = *BS;
+    BSCopy.BlackToMove = !BlackWinning;
+    MoveList LegalMoves = ch_getLegalMoves(&BSCopy);
+    Eval += KingPosVal;
+    Eval += (float)LegalMoves.Count / 2.0f;
 
-    return Eval;
+    return BlackWinning ? Eval : -Eval;
 }
 
 Sequence en_recurrentEvaluateMove(BoardState *BS, Sequence Seq, int Depth, float Alpha, float Beta, float (*EvalFunc)(BoardState *)) {
