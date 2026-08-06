@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "base.h"
 #include "chess.h"
@@ -102,6 +104,7 @@ static void logSequence(BoardState *BS, Sequence *Seq) {
 
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
+    srand((unsigned int)time(NULL));
     bool Running = true;
     char InputBuf[4096] = {0};
     BoardState BS = {0};

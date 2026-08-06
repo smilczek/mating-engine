@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "base.h"
 #include "chess.h"
@@ -88,6 +90,7 @@ static bool test_findBestSequence() {
 }
 
 int main() {
+    srand((unsigned int)time(NULL));
     bool Success = true;
 
     Success &= test_findBestSequence();

@@ -83,7 +83,12 @@ float en_evaluatePosition(BoardState *BS) {
     }
     Eval += (TotalBlackPosVal / NumOfBlack +
             TotalWhitePosVal / NumOfWhite);
-    return Eval;
+
+    // Introduce some randomness
+    float var = -1.0f + ((float)rand() / (float)RAND_MAX) * 2.0f;
+    var /= 16.0f;
+
+    return Eval + var;
 }
 
 static float en_evaluateOnePieceEndgamePosition(BoardState *BS) {
