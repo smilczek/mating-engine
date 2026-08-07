@@ -4,7 +4,11 @@
 // Half moves.
 #define MAX_DEPTH 16
 
+#ifdef _MSC_VER
+#include <math.h>
+#else
 #define INFINITY (__builtin_inff())
+#endif
 
 #define ABS(x) (((x) < 0.0f) ? -(x) : (x))
 
