@@ -51,19 +51,21 @@ float en_getPieceVal(char P) {
             break;
         }
     }
-    return ch_isBlackPiece(P) ? -PieceVal : PieceVal;
+    return PieceVal;
 }
 float en_getPawnAdvanceVal(char P, char R) {
     float Divisor = 8.0f;
     if (P == 'P') return ((float)(R - 1) / Divisor);
-    if (P == 'p') return -((float)(6 - R) / Divisor);
+    if (P == 'p') return ((float)(6 - R) / Divisor);
     return 0.0f;
 }
 
 float en_evaluatePosition(BoardState *BS) {
     float Eval = 0.0f;
+    float TotalBlackPieceVal = 0.0f;
     float TotalBlackPosVal = 0.0f;
     float NumOfBlack = (float)ch_getNumBlackPieces(BS);
+    float TotalWhitePieceVal = 0.0f;
     float TotalWhitePosVal = 0.0f;
     float NumOfWhite = (float)ch_getNumWhitePieces(BS);
     for (int R = 0; R < BOARDSIZE; ++R) {
@@ -82,16 +84,18 @@ float en_evaluatePosition(BoardState *BS) {
             PiecePosVal *= PiecePosVal;
             PiecePosVal /= 4.0f;
             if (ch_isBlackPiece(P)) {
-                TotalBlackPosVal -= PiecePosVal;
+                TotalBlackPieceVal += PieceVal;
+                TotalBlackPosVal += PiecePosVal;
             } else {
+                TotalWhitePieceVal += PieceVal;
                 TotalWhitePosVal += PiecePosVal;
             }
-
-            Eval += PieceVal;
         }
     }
-    Eval += (TotalBlackPosVal / NumOfBlack +
-            TotalWhitePosVal / NumOfWhite);
+    Eval += TotalWhitePieceVal;
+    Eval += TotalWhitePosVal / NumOfWhite;
+    Eval -= TotalBlackPieceVal;
+    Eval -= TotalBlackPosVal / NumOfBlack;
 
     // Introduce some randomness
     float var = -1.0f + ((float)rand() / (float)RAND_MAX) * 2.0f;
@@ -114,7 +118,8 @@ static float en_evaluateOnePieceEndgamePosition(BoardState *BS) {
             char P = ch_pieceAt(BS, R, F);
             if (!P) continue;
 
-            PieceVal += en_getPieceVal(P) * 4.0f;
+            int CurrVal = en_getPieceVal(P) * 4.0f;
+            PieceVal += ch_isBlackPiece(P) ? -CurrVal : CurrVal;
             if (P == 'k')
                 BlackKing = (Coord){R, F};
             else if (P == 'K')
