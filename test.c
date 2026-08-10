@@ -351,6 +351,18 @@ static bool test_filterLegalMoves() {
     return Success;
 }
 
+static bool test_CoordToBB() {
+    bool Success = true;
+
+    Success &= ch_CoordToBB((Coord){0, 0}) == 1LL;
+    Success &= ch_CoordToBB((Coord){7, 7}) == (1LL << 63);
+    Success &= ch_CoordToBB((Coord){0, 7}) == (1LL << 7);
+    Success &= ch_CoordToBB((Coord){7, 0}) == (1LL << 56);
+    Success &= ch_CoordToBB((Coord){4, 4}) == (1LL << 36);
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
     Success &= test_lowercase();
@@ -370,6 +382,8 @@ int main() {
     Success &= test_filterLegalMoves();
     assert(Success);
     Success &= test_applyMove();
+    assert(Success);
+    Success &= test_CoordToBB();
     assert(Success);
 
     return Success;
