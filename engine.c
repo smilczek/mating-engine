@@ -53,10 +53,21 @@ float en_getPieceVal(char P) {
     }
     return PieceVal;
 }
+
 float en_getPawnAdvanceVal(char P, char R) {
     float Divisor = 8.0f;
     if (P == 'P') return ((float)(R - 1) / Divisor);
     if (P == 'p') return ((float)(6 - R) / Divisor);
+    return 0.0f;
+}
+
+static float en_calculateKingSafety(BoardState *BS, int R, int F) {
+    assert(lowercase(ch_pieceAt(BS, R, F)) == 'k');
+
+    // Squares around the king
+    // Pieces x-raying the king
+    // Danger scaling with attackers
+    // Enemy queen off the board - massive bonus to safety
     return 0.0f;
 }
 
@@ -74,7 +85,13 @@ float en_evaluatePosition(BoardState *BS) {
             if (!P) {
                 continue;
             }
-            float PieceVal = en_getPieceVal(P);
+
+            float PieceVal = 0.0f;
+            if (lowercase(P) == 'k') {
+                PieceVal += en_calculateKingSafety(BS, R, F);
+            } else {
+                PieceVal += en_getPieceVal(P);
+            }
             PieceVal += en_getPawnAdvanceVal(P, R);
 
             float HalfBoard = (float)(BOARDSIZE - 1) / 2.0f;
