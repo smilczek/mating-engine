@@ -87,10 +87,6 @@ bool ch_isOnePieceEndgame(BoardState *BS) {
     return ch_getNumPiecesOnBoard(BS) == 3;
 }
 
-Bitboard ch_CoordToBB(Coord C) {
-    return 1ULL << (C.Rank * BOARDSIZE + C.File);
-}
-
 // Parse coord like e4, b2 etc.
 // 2 chars always.
 // lowercase assumed.

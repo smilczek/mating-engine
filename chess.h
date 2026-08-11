@@ -5,10 +5,6 @@
 
 #define MOVE_LIST_SIZE 256
 
-typedef unsigned long long Bitboard;
-static Bitboard FIRST_RANK_BB = 0xFFULL;
-static Bitboard FIRST_FILE_BB = 0x0101010101010101ULL;
-
 typedef struct {
     int Rank, File;
 } Coord;
@@ -19,11 +15,6 @@ typedef struct {
 
 typedef struct {
     char Board[BOARDSIZE][BOARDSIZE];
-    Bitboard KingBB;
-    Bitboard QueenBB[9];
-    Bitboard RookBB[10];
-    Bitboard KnightBB[10];
-    Bitboard BishopBB[10];
 
     bool BlackToMove;
 
