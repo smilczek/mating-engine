@@ -92,6 +92,13 @@ int bb_msb(Bitboard b) {
     return 63 ^ __builtin_clzll(b);
 }
 
+int bb_pop_lsb(Bitboard *b) {
+    assert(*b != 0);
+    const int sq = __builtin_ctzll(*b);
+    *b &= ~((Bitboard)1 << sq);
+    return sq;
+}
+
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
 }

@@ -145,6 +145,70 @@ static bool test_bbLsbMsb() {
     return Success;
 }
 
+static bool test_bbPopLsb() {
+    bool Success = true;
+
+    // Single square: pop returns 5, bitboard becomes 0
+    {
+        Bitboard b = bb_Square(5);
+        int sq = bb_pop_lsb(&b);
+        Success &= sq == 5;
+        Success &= b == 0ULL;
+    }
+
+    // Two squares: first call returns 3, second returns 17, then 0
+    {
+        Bitboard b = bb_Square(3) | bb_Square(17);
+        int s1 = bb_pop_lsb(&b);
+        Success &= s1 == 3;
+        int s2 = bb_pop_lsb(&b);
+        Success &= s2 == 17;
+        Success &= b == 0ULL;
+    }
+
+    // Full rank iteration: collect squares from BB_RANK_1, verify all 8 squares 0..7
+    {
+        Bitboard b = BB_RANK_1;
+        int squares[8];
+        int count = 0;
+        while (b) {
+            squares[count++] = bb_pop_lsb(&b);
+        }
+        Success &= count == 8;
+        for (int i = 0; i < 8; ++i) {
+            Success &= squares[i] == i;
+        }
+    }
+
+    // File A iteration: verify ascending order 0,8,16,...,56
+    {
+        Bitboard b = BB_FILE_A;
+        int expected[] = {0, 8, 16, 24, 32, 40, 48, 56};
+        int idx = 0;
+        while (b) {
+            int s = bb_pop_lsb(&b);
+            Success &= s == expected[idx];
+            ++idx;
+        }
+        Success &= idx == 8;
+    }
+
+    // Popcount integration: iterate a random-ish bitboard, count iterations == original popcount
+    {
+        Bitboard b = 0xACEFACEACEACEACEULL;
+        int origPop = bb_popcount(b);
+        int iterCount = 0;
+        while (b) {
+            bb_pop_lsb(&b);
+            ++iterCount;
+        }
+        Success &= iterCount == origPop;
+        Success &= b == 0ULL;
+    }
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -165,6 +229,7 @@ int main() {
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
     Success &= test_bbLsbMsb();
+    Success &= test_bbPopLsb();
     Success &= test_CoordToBB();
     assert(Success);
 
