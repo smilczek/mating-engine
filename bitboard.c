@@ -17,23 +17,29 @@ static const Bitboard BB_FILE_F = BB_FILE_A << 5;
 static const Bitboard BB_FILE_G = BB_FILE_A << 6;
 static const Bitboard BB_FILE_H = BB_FILE_A << 7;
 
-typedef int Direction;
-static const Direction DIR_NORTH = 8;
-static const Direction DIR_EAST = 1;
-static const Direction DIR_SOUTH = -DIR_NORTH;
-static const Direction DIR_WEST = -DIR_EAST;
-static const Direction DIR_NORTHEAST = DIR_NORTH + DIR_EAST;
-static const Direction DIR_NORTHWEST = DIR_NORTH + DIR_WEST;
-static const Direction DIR_SOUTHEAST = -DIR_NORTHWEST;
-static const Direction DIR_SOUTHWEST = -DIR_NORTHEAST;
+typedef enum {
+    DIR_NORTH = 8,
+    DIR_EAST = 1,
+    DIR_SOUTH = -DIR_NORTH,
+    DIR_WEST = -DIR_EAST,
+    DIR_NORTHEAST = DIR_NORTH + DIR_EAST,
+    DIR_NORTHWEST = DIR_NORTH + DIR_WEST,
+    DIR_SOUTHEAST = -DIR_NORTHWEST,
+    DIR_SOUTHWEST = -DIR_NORTHEAST
+} Direction;
 
 typedef struct {
-    char Board[BOARDSIZE][BOARDSIZE];
-    Bitboard KingBB;
-    Bitboard QueenBB[9];
-    Bitboard RookBB[10];
-    Bitboard KnightBB[10];
-    Bitboard BishopBB[10];
+    Bitboard King;
+    Bitboard Queens;
+    Bitboard Rooks;
+    Bitboard Knights;
+    Bitboard Bishops;
+    Bitboard Pawns;
+} Pieces;
+
+typedef struct {
+    Pieces White;
+    Pieces Black;
 
     bool BlackToMove;
 
@@ -44,8 +50,7 @@ typedef struct {
     bool CR_BQ; // Black Queen
 
     // En passant target
-    char EnPassant[2]; // e.g. e3
-    // Bitboard EnPassant; // e.g. e3
+    Bitboard EnPassant;
 
     // 50-move rule
     int HalfmoveClock;
