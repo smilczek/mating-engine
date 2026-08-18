@@ -82,6 +82,16 @@ Bitboard bb_Square(int sq) {
     return 1ULL << sq;
 }
 
+int bb_lsb(Bitboard b) {
+    assert(b != 0);
+    return __builtin_ctzll(b);
+}
+
+int bb_msb(Bitboard b) {
+    assert(b != 0);
+    return 63 ^ __builtin_clzll(b);
+}
+
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
 }

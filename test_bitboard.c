@@ -101,6 +101,50 @@ static bool test_bbPopcount() {
     return Success;
 }
 
+static bool test_bbLsbMsb() {
+    bool Success = true;
+
+    // Single square lsb
+    Success &= bb_lsb(bb_Square(0)) == 0;
+    Success &= bb_lsb(bb_Square(63)) == 63;
+    Success &= bb_lsb(bb_Square(32)) == 32;
+
+    // Rank/file lsb
+    Success &= bb_lsb(BB_RANK_1) == 0;       // a1 is LSB of rank 1
+    Success &= bb_lsb(BB_FILE_A) == 0;        // a1 is LSB of file A
+    Success &= bb_lsb(BB_RANK_8) == 56;       // a8 is LSB of rank 8
+
+    // Specific bit patterns
+    Success &= bb_lsb(0xAAAAAAAAAAAAAAAAULL) == 1;  // all odd bits set -> LSB is bit 1
+    Success &= bb_lsb(0x5555555555555555ULL) == 0;  // all even bits set -> LSB is bit 0
+
+    // Multiple bits set: lsb returns lowest
+    Bitboard multi = bb_Square(5) | bb_Square(20);
+    Success &= bb_lsb(multi) == 5;
+
+    // Single square msb
+    Success &= bb_msb(bb_Square(0)) == 0;
+    Success &= bb_msb(bb_Square(63)) == 63;
+    Success &= bb_msb(bb_Square(32)) == 32;
+
+    // Rank/file msb
+    Success &= bb_msb(BB_RANK_1) == 7;        // h1 is MSB of rank 1
+    Success &= bb_msb(BB_RANK_8) == 63;       // h8 is MSB of rank 8
+    Success &= bb_msb(BB_FILE_A) == 56;       // a8 is MSB of file A
+
+    // Multiple bits set: msb returns highest
+    Success &= bb_msb(multi) == 20;
+
+    // Round-trip: lsb(Square(x)) == x, msb(Square(x)) == x
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard bb = bb_Square(sq);
+        Success &= bb_lsb(bb) == sq;
+        Success &= bb_msb(bb) == sq;
+    }
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -120,6 +164,8 @@ int main() {
     Success &= test_shift();
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
+    Success &= test_bbLsbMsb();
+    Success &= test_CoordToBB();
     assert(Success);
 
     return !Success;
