@@ -63,6 +63,30 @@ bool test_shift() {
     return Success;
 }
 
+static bool test_bbSquare() {
+    bool Success = true;
+
+    // Corner squares
+    Success &= bb_Square(0) == 1ULL;
+    Success &= bb_Square(63) == (1ULL << 63);
+
+    // Edge squares
+    Success &= bb_Square(7) == (1ULL << 7);
+    Success &= bb_Square(56) == (1ULL << 56);
+
+    // Interior square (e4 = 36)
+    Success &= bb_Square(36) == (1ULL << 36);
+
+    // Each result must have exactly one bit set
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard bb = bb_Square(sq);
+        // Verify only the expected bit is set
+        Success &= (bb ^ (1ULL << sq)) == 0ULL;
+    }
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -80,7 +104,8 @@ int main() {
     bool Success = true;
 
     Success &= test_shift();
+    Success &= test_bbSquare();
     assert(Success);
 
-    return Success;
+    return !Success;
 }

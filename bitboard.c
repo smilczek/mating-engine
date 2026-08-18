@@ -73,6 +73,11 @@ Bitboard bb_shift(Bitboard B, Direction D) {
            D == DIR_SOUTHWEST ? (B & ~BB_FILE_A) >> 9 : 0ULL;
 }
 
+Bitboard bb_Square(int sq) {
+    assert(sq >= 0 && sq < 64);
+    return 1ULL << sq;
+}
+
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
 }
