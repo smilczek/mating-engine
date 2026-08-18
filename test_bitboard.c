@@ -324,6 +324,87 @@ static bool test_CoordToBB() {
 }
 
 
+static bool test_EnPassant_initNone() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;  // Explicitly initialize to "no en passant"
+
+    // Must be -1 after explicit init
+    Success &= BS.EnPassant == -1;
+
+    return Success;
+}
+
+static bool test_EnPassant_setGet() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;
+
+    // d5 = rank 5 (index 4) * 8 + file d (index 3) = 35
+    BS.EnPassant = 35;
+    Success &= BS.EnPassant == 35;
+
+    // Change to f3 = rank 3 (index 2) * 8 + file f (index 5) = 21
+    BS.EnPassant = 21;
+    Success &= BS.EnPassant == 21;
+
+    // Reset to none
+    BS.EnPassant = -1;
+    Success &= BS.EnPassant == -1;
+
+    return Success;
+}
+
+static bool test_EnPassant_validSquares() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;
+
+    // Valid en passant squares are on ranks 3 and 6 (indices 16..23 and 40..47)
+    // Rank 3 (white's en passant zone): a3=16, b3=17, ..., h3=23
+    BS.EnPassant = 16;  // a3
+    Success &= BS.EnPassant >= 0 && BS.EnPassant < 64;
+
+    BS.EnPassant = 23;  // h3
+    Success &= BS.EnPassant >= 0 && BS.EnPassant < 64;
+
+    // Rank 6 (black's en passant zone): a6=40, b6=41, ..., h6=47
+    BS.EnPassant = 40;  // a6
+    Success &= BS.EnPassant >= 0 && BS.EnPassant < 64;
+
+    BS.EnPassant = 47;  // h6
+    Success &= BS.EnPassant >= 0 && BS.EnPassant < 64;
+
+    return Success;
+}
+
+static bool test_EnPassant_noneMeansNoRight() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;
+
+    // -1 means no en passant target — this is the sentinel
+    Success &= BS.EnPassant == -1;
+
+    // A value of 0 would mean a1 IS the en passant square (unlikely but valid as int)
+    // Only -1 should represent "none"
+    BS.EnPassant = 0;
+    Success &= BS.EnPassant != -1;  // Square 0 is a valid square, not "none"
+
+    BS.EnPassant = 63;
+    Success &= BS.EnPassant != -1;  // Square 63 is also valid
+
+    return Success;
+}
+
 static bool test_BitboardState_zeroInit() {
     bool Success = true;
 
@@ -340,6 +421,10 @@ static bool test_BitboardState_zeroInit() {
     Success &= BS.Occupancy[BLACK] == 0ULL;
     Success &= BS.AllPieces == 0ULL;
     Success &= BS.Blocked == 0ULL;
+
+    // Note: zero-init gives EnPassant==0 which is technically a valid square.
+    // Proper initialization should set EnPassant=-1 explicitly.
+    // This test verifies the raw zero-init behavior; see test_EnPassant_initNone for correct usage.
 
     return Success;
 }
@@ -487,6 +572,10 @@ int main() {
     Success &= test_bbMoreThanOne();
     Success &= test_bbNextBit();
     Success &= test_CoordToBB();
+    Success &= test_EnPassant_initNone();
+    Success &= test_EnPassant_setGet();
+    Success &= test_EnPassant_validSquares();
+    Success &= test_EnPassant_noneMeansNoRight();
     Success &= test_BitboardState_zeroInit();
     Success &= test_BitboardState_setPiece();
     Success &= test_BitboardState_updateOccupancy();

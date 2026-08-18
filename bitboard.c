@@ -47,6 +47,7 @@ typedef struct {
     Bitboard Occupancy[2];     // [color] — all pieces of that color
     Bitboard AllPieces;          // all pieces (union of both colors)
     Bitboard Blocked;             // either color (same as AllPieces, conceptually "squares blocked by any piece")
+    int EnPassant;                // en passant target square (0-63, or -1 for no EP)
 } BitboardState;
 
 static inline void bb_updateOccupancy(BitboardState *s) {
