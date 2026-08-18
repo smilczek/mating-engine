@@ -24,7 +24,7 @@
 [x] 1. Add `bb_Square()` — create bitboard for a single square (maps Stockfish's `square_bb`)
 [x] 2. Add `bb_popcount()` — count set bits using `__builtin_popcountll`
 [x] 3. Add `bb_lsb()` / `bb_msb()` — get least/most significant bit index (De Bruijn or `__builtin_ctzll`)
-[ ] 4. Add `bb_pop_lsb()` — find and clear LSB; enables iterating all set squares in a bitboard
+[x] 4. Add `bb_pop_lsb()` — find and clear LSB; enables iterating all set squares in a bitboard
 [ ] 5. Add `bb_moreThanOne()` — test if bitboard has >1 bit set
 [ ] 6. Add `bb_nextBit()` — iterate bits via `pop_lsb` loop pattern
 
