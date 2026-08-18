@@ -29,7 +29,7 @@
 [x] 6. Add `bb_nextBit()` — iterate bits via `pop_lsb` loop pattern
 
 ## State Representation
-[ ] 7. Expand `BitboardState` to use 12 bitboards (6 piece types × 2 colors) + occupied = 13 total, like Stockfish's occupancy by color/piece
+[x] 7. Expand `BitboardState` to use 12 bitboards (6 piece types × 2 colors) + occupied = 13 total, like Stockfish's occupancy by color/piece
 [ ] 8. Add combined occupancy bitboards: `AllPieces`, `Occupancy[2]` (white/black), `Blocked` (either color)
 [ ] 9. Replace `EnPassant` bitboard with single-square representation (matches Stockfish)
 [ ] 10. Convert castling rights to a compact integer encoding (4 bits) instead of 4 bools
