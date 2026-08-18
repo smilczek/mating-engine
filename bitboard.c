@@ -99,6 +99,10 @@ int bb_pop_lsb(Bitboard *b) {
     return sq;
 }
 
+bool bb_moreThanOne(Bitboard b) {
+    return (b & (b - 1)) != 0;
+}
+
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
 }

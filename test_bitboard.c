@@ -209,6 +209,33 @@ static bool test_bbPopLsb() {
     return Success;
 }
 
+static bool test_bbMoreThanOne() {
+    bool Success = true;
+
+    // Zero bits: false
+    Success &= !bb_moreThanOne(0ULL);
+
+    // Single bit at square 0: false
+    Success &= !bb_moreThanOne(bb_Square(0));
+
+    // Single bit at square 63 (top): false
+    Success &= !bb_moreThanOne(bb_Square(63));
+
+    // Two bits set: true
+    Success &= bb_moreThanOne(bb_Square(0) | bb_Square(7));
+
+    // Eight bits set (entire rank 1): true
+    Success &= bb_moreThanOne(BB_RANK_1);
+
+    // All 64 bits: true
+    Success &= bb_moreThanOne(0xFFFFFFFFFFFFFFFFULL);
+
+    // Single high bit 0x8000000000000000: false
+    Success &= !bb_moreThanOne(0x8000000000000000ULL);
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -230,6 +257,7 @@ int main() {
     Success &= test_bbPopcount();
     Success &= test_bbLsbMsb();
     Success &= test_bbPopLsb();
+    Success &= test_bbMoreThanOne();
     Success &= test_CoordToBB();
     assert(Success);
 
