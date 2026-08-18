@@ -36,7 +36,7 @@
 
 ## FEN Parsing & Display
 [x] 11. Implement `bb_parseFEN()` — populate bitboards from FEN string
-[ ] 12. Implement `bb_fenToString()` — serialize bitboard state back to FEN
+[x] 12. Implement `bb_fenToString()` — serialize bitboard state back to FEN
 [ ] 13. Add `bb_printBoard()` — ASCII debug visualization of bitboard state
 
 ## Attack Generation (precomputed tables)
