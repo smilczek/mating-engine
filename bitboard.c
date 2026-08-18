@@ -103,6 +103,11 @@ bool bb_moreThanOne(Bitboard b) {
     return (b & (b - 1)) != 0;
 }
 
+int bb_nextBit(Bitboard *remaining) {
+    if (*remaining == 0) return -1;
+    return bb_pop_lsb(remaining);
+}
+
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
 }

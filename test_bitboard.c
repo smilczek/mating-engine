@@ -236,6 +236,81 @@ static bool test_bbMoreThanOne() {
     return Success;
 }
 
+static bool test_bbNextBit() {
+    bool Success = true;
+
+    // Empty bitboard: must return -1 immediately
+    {
+        Bitboard b = 0ULL;
+        Success &= bb_nextBit(&b) == -1;
+        Success &= b == 0ULL;
+    }
+
+    // Single square: returns the square, then -1
+    {
+        Bitboard b = bb_Square(23);
+        Success &= bb_nextBit(&b) == 23;
+        Success &= bb_nextBit(&b) == -1;
+        Success &= b == 0ULL;
+    }
+
+    // Multi-square iteration: collect all squares from BB_RANK_1
+    {
+        Bitboard b = BB_RANK_1;
+        int squares[8];
+        int count = 0;
+        while (true) {
+            int sq = bb_nextBit(&b);
+            if (sq == -1) break;
+            squares[count++] = sq;
+        }
+        Success &= count == 8;
+        for (int i = 0; i < 8; ++i) {
+            Success &= squares[i] == i;
+        }
+    }
+
+    // Full board iteration: iterate all 64 squares, verify count matches popcount
+    {
+        Bitboard b = 0xFFFFFFFFFFFFFFFFULL;
+        int count = 0;
+        while (true) {
+            int sq = bb_nextBit(&b);
+            if (sq == -1) break;
+            Success &= sq >= 0 && sq < 64;
+            ++count;
+        }
+        Success &= count == 64;
+        Success &= b == 0ULL;
+    }
+
+    // Ascending order: results must come back LSB-first (increasing)
+    {
+        Bitboard b = BB_FILE_A;
+        int prev = -1;
+        while (true) {
+            int sq = bb_nextBit(&b);
+            if (sq == -1) break;
+            Success &= sq > prev;
+            prev = sq;
+        }
+    }
+
+    // Arbitrary pattern: two scattered squares
+    {
+        Bitboard b = bb_Square(12) | bb_Square(45);
+        int s1 = bb_nextBit(&b);
+        Success &= s1 == 12;
+        int s2 = bb_nextBit(&b);
+        Success &= s2 == 45;
+        int s3 = bb_nextBit(&b);
+        Success &= s3 == -1;
+        Success &= b == 0ULL;
+    }
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -258,6 +333,7 @@ int main() {
     Success &= test_bbLsbMsb();
     Success &= test_bbPopLsb();
     Success &= test_bbMoreThanOne();
+    Success &= test_bbNextBit();
     Success &= test_CoordToBB();
     assert(Success);
 

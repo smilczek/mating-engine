@@ -26,7 +26,7 @@
 [x] 3. Add `bb_lsb()` / `bb_msb()` — get least/most significant bit index (De Bruijn or `__builtin_ctzll`)
 [x] 4. Add `bb_pop_lsb()` — find and clear LSB; enables iterating all set squares in a bitboard
 [x] 5. Add `bb_moreThanOne()` — test if bitboard has >1 bit set
-[ ] 6. Add `bb_nextBit()` — iterate bits via `pop_lsb` loop pattern
+[x] 6. Add `bb_nextBit()` — iterate bits via `pop_lsb` loop pattern
 
 ## State Representation
 [ ] 7. Expand `BitboardState` to use 12 bitboards (6 piece types × 2 colors) + occupied = 13 total, like Stockfish's occupancy by color/piece
