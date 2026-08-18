@@ -32,7 +32,7 @@
 [x] 7. Expand `BitboardState` to use 12 bitboards (6 piece types × 2 colors) + occupied = 13 total, like Stockfish's occupancy by color/piece
 [x] 8. Add combined occupancy bitboards: `AllPieces`, `Occupancy[2]` (white/black), `Blocked` (either color)
 [x] 9. Replace `EnPassant` bitboard with single-square representation (matches Stockfish)
-[ ] 10. Convert castling rights to a compact integer encoding (4 bits) instead of 4 bools
+[x] 10. Convert castling rights to a compact integer encoding (4 bits) instead of 4 bools
 
 ## FEN Parsing & Display
 [ ] 11. Implement `bb_parseFEN()` — populate bitboards from FEN string
