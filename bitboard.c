@@ -42,13 +42,31 @@ typedef enum {
     KING = 5
 } PieceType;
 
+#define BB_CASTLE_WK  (1 << 0)  // White king-side
+#define BB_CASTLE_WQ  (1 << 1)  // White queen-side
+#define BB_CASTLE_BK  (1 << 2)  // Black king-side
+#define BB_CASTLE_BQ  (1 << 3)  // Black queen-side
+
 typedef struct {
     Bitboard Pieces[2][6];   // [color][piece_type] — 12 piece bitboards
     Bitboard Occupancy[2];     // [color] — all pieces of that color
     Bitboard AllPieces;          // all pieces (union of both colors)
     Bitboard Blocked;             // either color (same as AllPieces, conceptually "squares blocked by any piece")
     int EnPassant;                // en passant target square (0-63, or -1 for no EP)
+    unsigned char Castling;       // 4-bit castling rights bitmask
 } BitboardState;
+
+static inline int bb_hasCastleRight(BitboardState *s, int rightMask) {
+    return (s->Castling & rightMask) != 0;
+}
+
+static inline void bb_setCastleRight(BitboardState *s, int rightMask) {
+    s->Castling |= rightMask;
+}
+
+static inline void bb_clearCastleRight(BitboardState *s, int rightMask) {
+    s->Castling &= ~rightMask;
+}
 
 static inline void bb_updateOccupancy(BitboardState *s) {
     for (int c = 0; c < 2; c++) {

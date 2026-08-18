@@ -561,6 +561,143 @@ static bool test_Occupancy_twoPieces() {
     return Success;
 }
 
+static bool test_Castling_zeroInit() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Zero-init state has Castling == 0 (no rights)
+    Success &= BS.Castling == 0;
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_setWK() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Set WK right
+    bb_setCastleRight(&BS, BB_CASTLE_WK);
+
+    Success &= BS.Castling == BB_CASTLE_WK;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_allRights() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Set all 4 rights (value 15)
+    bb_setCastleRight(&BS, BB_CASTLE_WK);
+    bb_setCastleRight(&BS, BB_CASTLE_WQ);
+    bb_setCastleRight(&BS, BB_CASTLE_BK);
+    bb_setCastleRight(&BS, BB_CASTLE_BQ);
+
+    Success &= BS.Castling == 15;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_clearBK() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Set all 4 rights
+    BS.Castling = 15;
+
+    // Clear BK right — remaining should be 11 (0b1011 = WK+WQ+BQ)
+    bb_clearCastleRight(&BS, BB_CASTLE_BK);
+
+    Success &= BS.Castling == 11;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_roundTrip() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Set WQ + BK (bits 1 and 2 => value 6)
+    bb_setCastleRight(&BS, BB_CASTLE_WQ);
+    bb_setCastleRight(&BS, BB_CASTLE_BK);
+
+    Success &= BS.Castling == 6;
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    // Clear WQ — only BK should remain (value 4)
+    bb_clearCastleRight(&BS, BB_CASTLE_WQ);
+
+    Success &= BS.Castling == 4;
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_clearUnset() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Only set WK
+    bb_setCastleRight(&BS, BB_CASTLE_WK);
+
+    // Try clearing BQ which isn't set — no crash, value unchanged
+    int beforeClear = BS.Castling;
+    bb_clearCastleRight(&BS, BB_CASTLE_BQ);
+
+    Success &= BS.Castling == beforeClear;
+    Success &= BS.Castling == BB_CASTLE_WK;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    return Success;
+}
+
+static bool test_Castling_constants() {
+    bool Success = true;
+
+    // Verify constant values match Stockfish convention
+    Success &= BB_CASTLE_WK == 1;   // bit 0
+    Success &= BB_CASTLE_WQ == 2;   // bit 1
+    Success &= BB_CASTLE_BK == 4;   // bit 2
+    Success &= BB_CASTLE_BQ == 8;   // bit 3
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
 
@@ -581,6 +718,13 @@ int main() {
     Success &= test_BitboardState_updateOccupancy();
     Success &= test_BitboardState_fullPosition();
     Success &= test_Occupancy_twoPieces();
+    Success &= test_Castling_zeroInit();
+    Success &= test_Castling_setWK();
+    Success &= test_Castling_allRights();
+    Success &= test_Castling_clearBK();
+    Success &= test_Castling_roundTrip();
+    Success &= test_Castling_clearUnset();
+    Success &= test_Castling_constants();
     assert(Success);
 
     return !Success;
