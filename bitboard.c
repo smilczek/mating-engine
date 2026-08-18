@@ -43,15 +43,20 @@ typedef enum {
 } PieceType;
 
 typedef struct {
-    Bitboard Pieces[2][6];  // [color][piece_type] — 12 piece bitboards
-    Bitboard Occupied;         // union of all Pieces
+    Bitboard Pieces[2][6];   // [color][piece_type] — 12 piece bitboards
+    Bitboard Occupancy[2];     // [color] — all pieces of that color
+    Bitboard AllPieces;          // all pieces (union of both colors)
+    Bitboard Blocked;             // either color (same as AllPieces, conceptually "squares blocked by any piece")
 } BitboardState;
 
-static inline void bb_updateOccupied(BitboardState *s) {
-    s->Occupied = 0;
-    for (int c = 0; c < 2; c++)
+static inline void bb_updateOccupancy(BitboardState *s) {
+    for (int c = 0; c < 2; c++) {
+        s->Occupancy[c] = 0;
         for (int pt = 0; pt < 6; pt++)
-            s->Occupied |= s->Pieces[c][pt];
+            s->Occupancy[c] |= s->Pieces[c][pt];
+    }
+    s->AllPieces = s->Occupancy[WHITE] | s->Occupancy[BLACK];
+    s->Blocked = s->AllPieces;
 }
 
 Bitboard bb_shift(Bitboard B, Direction D) {

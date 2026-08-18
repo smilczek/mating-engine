@@ -336,7 +336,10 @@ static bool test_BitboardState_zeroInit() {
             Success &= BS.Pieces[c][pt] == 0ULL;
         }
     }
-    Success &= BS.Occupied == 0ULL;
+    Success &= BS.Occupancy[WHITE] == 0ULL;
+    Success &= BS.Occupancy[BLACK] == 0ULL;
+    Success &= BS.AllPieces == 0ULL;
+    Success &= BS.Blocked == 0ULL;
 
     return Success;
 }
@@ -365,7 +368,7 @@ static bool test_BitboardState_setPiece() {
     return Success;
 }
 
-static bool test_BitboardState_updateOccupied() {
+static bool test_BitboardState_updateOccupancy() {
     bool Success = true;
 
     BitboardState BS;
@@ -375,14 +378,24 @@ static bool test_BitboardState_updateOccupied() {
     BS.Pieces[0][0] = BB_RANK_2;  // 8 pawns
     BS.Pieces[0][4] = bb_Square(4); // king on e1
 
-    bb_updateOccupied(&BS);
+    bb_updateOccupancy(&BS);
 
-    // Occupied must equal union of all piece bitboards
-    Bitboard expected = BB_RANK_2 | bb_Square(4);
-    Success &= BS.Occupied == expected;
+    // Occupancy[WHITE] must equal union of all white piece bitboards
+    Bitboard whiteExpected = BB_RANK_2 | bb_Square(4);
+    Success &= BS.Occupancy[WHITE] == whiteExpected;
 
-    // Popcount of occupied should be 9
-    Success &= bb_popcount(BS.Occupied) == 9;
+    // Occupancy[BLACK] must be zero (no black pieces placed)
+    Success &= BS.Occupancy[BLACK] == 0ULL;
+
+    // AllPieces == Occupancy[WHITE] | Occupancy[BLACK]
+    Success &= BS.AllPieces == (BS.Occupancy[WHITE] | BS.Occupancy[BLACK]);
+    Success &= BS.AllPieces == whiteExpected;
+
+    // Blocked == AllPieces
+    Success &= BS.Blocked == BS.AllPieces;
+
+    // Popcount of allPieces should be 9
+    Success &= bb_popcount(BS.AllPieces) == 9;
 
     return Success;
 }
@@ -409,26 +422,56 @@ static bool test_BitboardState_fullPosition() {
     BS.Pieces[BLACK][QUEEN]    = bb_Square(59);
     BS.Pieces[BLACK][KING]     = bb_Square(60);
 
-    bb_updateOccupied(&BS);
+    bb_updateOccupancy(&BS);
 
-    // White occupied: rank 1 + rank 2
+    // White occupancy: rank 1 + rank 2
     Bitboard whiteExpected = BB_RANK_1 | BB_RANK_2;
-    Bitboard whiteOccupied = 0;
-    for (int pt = 0; pt < 6; ++pt) whiteOccupied |= BS.Pieces[0][pt];
-    Success &= whiteOccupied == whiteExpected;
+    Success &= BS.Occupancy[WHITE] == whiteExpected;
 
-    // Black occupied: rank 7 + rank 8
+    // Black occupancy: rank 7 + rank 8
     Bitboard blackExpected = BB_RANK_7 | BB_RANK_8;
-    Bitboard blackOccupied = 0;
-    for (int pt = 0; pt < 6; ++pt) blackOccupied |= BS.Pieces[1][pt];
-    Success &= blackOccupied == blackExpected;
+    Success &= BS.Occupancy[BLACK] == blackExpected;
 
-    // Total occupied: rank 1 + rank 2 + rank 7 + rank 8
+    // AllPieces == Occupancy[WHITE] | Occupancy[BLACK]
     Bitboard totalExpected = whiteExpected | blackExpected;
-    Success &= BS.Occupied == totalExpected;
+    Success &= BS.AllPieces == totalExpected;
+    Success &= BS.AllPieces == (BS.Occupancy[WHITE] | BS.Occupancy[BLACK]);
+
+    // Blocked == AllPieces
+    Success &= BS.Blocked == BS.AllPieces;
 
     // Should have 32 pieces total
-    Success &= bb_popcount(BS.Occupied) == 32;
+    Success &= bb_popcount(BS.AllPieces) == 32;
+
+    return Success;
+}
+
+static bool test_Occupancy_twoPieces() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+
+    // Place white king on e1 (square 4) and black queen on d8 (square 59)
+    BS.Pieces[WHITE][KING] = bb_Square(4);
+    BS.Pieces[BLACK][QUEEN] = bb_Square(59);
+
+    bb_updateOccupancy(&BS);
+
+    // Occupancy[WHITE] has only e1
+    Success &= BS.Occupancy[WHITE] == bb_Square(4);
+
+    // Occupancy[BLACK] has only d8
+    Success &= BS.Occupancy[BLACK] == bb_Square(59);
+
+    // AllPieces has both e1 and d8
+    Success &= BS.AllPieces == (bb_Square(4) | bb_Square(59));
+
+    // Blocked == AllPieces
+    Success &= BS.Blocked == BS.AllPieces;
+
+    // AllPieces == Occupancy[WHITE] | Occupancy[BLACK]
+    Success &= BS.AllPieces == (BS.Occupancy[WHITE] | BS.Occupancy[BLACK]);
 
     return Success;
 }
@@ -446,8 +489,9 @@ int main() {
     Success &= test_CoordToBB();
     Success &= test_BitboardState_zeroInit();
     Success &= test_BitboardState_setPiece();
-    Success &= test_BitboardState_updateOccupied();
+    Success &= test_BitboardState_updateOccupancy();
     Success &= test_BitboardState_fullPosition();
+    Success &= test_Occupancy_twoPieces();
     assert(Success);
 
     return !Success;
