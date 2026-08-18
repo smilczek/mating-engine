@@ -87,6 +87,20 @@ static bool test_bbSquare() {
     return Success;
 }
 
+static bool test_bbPopcount() {
+    bool Success = true;
+
+    Success &= bb_popcount(0ULL) == 0;
+    Success &= bb_popcount(1ULL) == 1;
+    Success &= bb_popcount(BB_RANK_1) == 8;
+    Success &= bb_popcount(BB_FILE_A) == 8;
+    Success &= bb_popcount(BB_RANK_1 & BB_FILE_A) == 1;
+    Success &= bb_popcount(0xFFFFFFFFFFFFFFFFULL) == 64;
+    Success &= bb_popcount(0x5555555555555555ULL) == 32;
+
+    return Success;
+}
+
 static bool test_CoordToBB() {
     bool Success = true;
 
@@ -105,6 +119,7 @@ int main() {
 
     Success &= test_shift();
     Success &= test_bbSquare();
+    Success &= test_bbPopcount();
     assert(Success);
 
     return !Success;

@@ -73,6 +73,10 @@ Bitboard bb_shift(Bitboard B, Direction D) {
            D == DIR_SOUTHWEST ? (B & ~BB_FILE_A) >> 9 : 0ULL;
 }
 
+int bb_popcount(Bitboard b) {
+    return __builtin_popcountll(b);
+}
+
 Bitboard bb_Square(int sq) {
     assert(sq >= 0 && sq < 64);
     return 1ULL << sq;
