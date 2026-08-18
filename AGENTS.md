@@ -35,7 +35,7 @@
 [x] 10. Convert castling rights to a compact integer encoding (4 bits) instead of 4 bools
 
 ## FEN Parsing & Display
-[ ] 11. Implement `bb_parseFEN()` — populate bitboards from FEN string
+[x] 11. Implement `bb_parseFEN()` — populate bitboards from FEN string
 [ ] 12. Implement `bb_fenToString()` — serialize bitboard state back to FEN
 [ ] 13. Add `bb_printBoard()` — ASCII debug visualization of bitboard state
 
