@@ -1,3 +1,7 @@
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+
 typedef unsigned long long Bitboard;
 static const Bitboard BB_RANK_1 = 0xFFULL;
 static const Bitboard BB_RANK_2 = BB_RANK_1 << 8 * 1;
@@ -54,6 +58,9 @@ typedef struct {
     Bitboard Blocked;             // either color (same as AllPieces, conceptually "squares blocked by any piece")
     int EnPassant;                // en passant target square (0-63, or -1 for no EP)
     unsigned char Castling;       // 4-bit castling rights bitmask
+    Color ActiveColor;              // side to move (WHITE or BLACK)
+    unsigned char HalfmoveClock;   // 50-move rule counter
+    unsigned char FullmoveNumber;   // game move number (starts at 0, increments after black's move)
 } BitboardState;
 
 static inline int bb_hasCastleRight(BitboardState *s, int rightMask) {
@@ -127,4 +134,101 @@ int bb_nextBit(Bitboard *remaining) {
 
 Bitboard ch_CoordToBB(Coord C) {
     return 1ULL << (C.Rank * BOARDSIZE + C.File);
+}
+
+// Helper: convert piece character to PieceType
+static int bb_pieceCharToType(char c) {
+    switch (c) {
+        case 'p': case 'P': return PAWN;
+        case 'n': case 'N': return KNIGHT;
+        case 'b': case 'B': return BISHOP;
+        case 'r': case 'R': return ROOK;
+        case 'q': case 'Q': return QUEEN;
+        case 'k': case 'K': return KING;
+        default: return -1;
+    }
+}
+
+// Parse algebraic square (e.g. "e3") to 0-63 index
+static int bb_parseSquare(const char *sq) {
+    int file = sq[0] - 'a';
+    int rank = sq[1] - '1';
+    return rank * 8 + file;
+}
+
+// Parse FEN string and populate BitboardState
+void bb_parseFEN(BitboardState *s, const char *fen) {
+    // Zero out entire state
+    memset(s, 0, sizeof(BitboardState));
+    s->EnPassant = -1;
+    s->ActiveColor = WHITE;
+
+    // --- Parse board section ---
+    int rank = 7;  // Start at rank 7 (top), go down to 0
+    int file = 0;   // Start at file A (0), go right to H (7)
+
+    while (*fen != ' ' && *fen != '\0') {
+        char c = *fen++;
+        if (c >= '1' && c <= '8') {
+            // Skip empty squares
+            file += c - '0';
+        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            // Place piece
+            int color = (c >= 'A' && c <= 'Z') ? WHITE : BLACK;
+            int type = bb_pieceCharToType(c);
+            if (type >= 0) {
+                int sq = rank * 8 + file;
+                s->Pieces[color][type] |= bb_Square(sq);
+            }
+            file++;
+        } else if (c == '/') {
+            // End of rank
+            rank--;
+            file = 0;
+        }
+    }
+
+    // --- Parse active color ---
+    fen++;  // skip space
+    if (*fen == 'b') {
+        s->ActiveColor = BLACK;
+    }
+
+    // --- Parse castling rights ---
+    fen++;  // skip space
+    while (*(++fen) != ' ' && *fen != '\0') {
+        switch (*fen) {
+            case 'K': bb_setCastleRight(s, BB_CASTLE_WK); break;
+            case 'Q': bb_setCastleRight(s, BB_CASTLE_WQ); break;
+            case 'k': bb_setCastleRight(s, BB_CASTLE_BK); break;
+            case 'q': bb_setCastleRight(s, BB_CASTLE_BQ); break;
+            default: break;  // '-' or other chars ignored
+        }
+    }
+
+    // --- Parse en passant target square ---
+    fen++;  // skip space
+    if (*fen != '-') {
+        s->EnPassant = bb_parseSquare(fen);
+        fen += 2;  // skip the two-character square name
+    } else {
+        fen++;  // skip '-'
+    }
+
+    // --- Parse halfmove clock ---
+    fen++;  // skip space
+    s->HalfmoveClock = 0;
+    while (*fen != ' ' && *fen != '\0') {
+        s->HalfmoveClock = s->HalfmoveClock * 10 + (*fen++ - '0');
+    }
+
+    // --- Parse fullmove number ---
+    fen++;  // skip space
+    s->FullmoveNumber = 0;
+    while (*fen >= '0' && *fen <= '9') {
+        s->FullmoveNumber = s->FullmoveNumber * 10 + (*fen++ - '0');
+    }
+
+    // Update occupancy bitboards from piece bitboards
+    bb_updateOccupancy(s);
 }

@@ -698,6 +698,212 @@ static bool test_Castling_constants() {
     return Success;
 }
 
+// --- bb_parseFEN() tests ---
+
+static bool test_bbParseFEN_startPosition() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    // White pawns on rank 2
+    Success &= BS.Pieces[WHITE][PAWN] == BB_RANK_2;
+
+    // Black pawns on rank 7
+    Success &= BS.Pieces[BLACK][PAWN] == BB_RANK_7;
+
+    // White knights b1(1), g1(6)
+    Success &= BS.Pieces[WHITE][KNIGHT] == (bb_Square(1) | bb_Square(6));
+
+    // White bishops c1(2), f1(5)
+    Success &= BS.Pieces[WHITE][BISHOP] == (bb_Square(2) | bb_Square(5));
+
+    // White rooks a1(0), h1(7)
+    Success &= BS.Pieces[WHITE][ROOK] == (bb_Square(0) | bb_Square(7));
+
+    // White queen d1(3)
+    Success &= BS.Pieces[WHITE][QUEEN] == bb_Square(3);
+
+    // White king e1(4)
+    Success &= BS.Pieces[WHITE][KING] == bb_Square(4);
+
+    // Black knights b8(57), g8(62)
+    Success &= BS.Pieces[BLACK][KNIGHT] == (bb_Square(57) | bb_Square(62));
+
+    // Black bishops c8(58), f8(61)
+    Success &= BS.Pieces[BLACK][BISHOP] == (bb_Square(58) | bb_Square(61));
+
+    // Black rooks a8(56), h8(63)
+    Success &= BS.Pieces[BLACK][ROOK] == (bb_Square(56) | bb_Square(63));
+
+    // Black queen d8(59)
+    Success &= BS.Pieces[BLACK][QUEEN] == bb_Square(59);
+
+    // Black king e8(60)
+    Success &= BS.Pieces[BLACK][KING] == bb_Square(60);
+
+    // ActiveColor should be WHITE
+    Success &= BS.ActiveColor == WHITE;
+
+    // Castling: all four rights => 15
+    Success &= BS.Castling == 15;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    // EnPassant should be -1 (none)
+    Success &= BS.EnPassant == -1;
+
+    // Occupancy after parse: AllPieces should have 32 bits set
+    Success &= bb_popcount(BS.AllPieces) == 32;
+
+    // Occupancy[WHITE] should be rank 1 + rank 2
+    Success &= BS.Occupancy[WHITE] == (BB_RANK_1 | BB_RANK_2);
+
+    // Occupancy[BLACK] should be rank 7 + rank 8
+    Success &= BS.Occupancy[BLACK] == (BB_RANK_7 | BB_RANK_8);
+
+    return Success;
+}
+
+static bool test_bbParseFEN_enPassant() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/Pp6/8/PPPPPPPP/RNBQKBNR b KQkq a3 0 1";
+    bb_parseFEN(&BS, fen);
+
+    // EnPassant square a3 = file 0, rank 2 => 0*8 + 0 = 16
+    Success &= BS.EnPassant == 16;
+
+    // ActiveColor should be BLACK
+    Success &= BS.ActiveColor == BLACK;
+
+    return Success;
+}
+
+static bool test_bbParseFEN_reducedCastling() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    // Castling: K(1) + q(8) = 9
+    Success &= BS.Castling == 9;
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_WK);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_WQ);
+    Success &= !bb_hasCastleRight(&BS, BB_CASTLE_BK);
+    Success &= bb_hasCastleRight(&BS, BB_CASTLE_BQ);
+
+    // EnPassant should be -1
+    Success &= BS.EnPassant == -1;
+
+    return Success;
+}
+
+static bool test_bbParseFEN_noCastling() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    // No castling rights
+    Success &= BS.Castling == 0;
+
+    // EnPassant should be -1
+    Success &= BS.EnPassant == -1;
+
+    return Success;
+}
+
+static bool test_bbParseFEN_activeColorBlack() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    Success &= BS.ActiveColor == BLACK;
+
+    return Success;
+}
+
+static bool test_bbParseFEN_halfmoveFullmove() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 50 10";
+    bb_parseFEN(&BS, fen);
+
+    Success &= BS.HalfmoveClock == 50;
+    Success &= BS.FullmoveNumber == 10;
+
+    return Success;
+}
+
+static bool test_bbParseFEN_kingsIndication() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqk1nr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    // Black king is on e8(60), not f8(61)
+    Success &= BS.Pieces[BLACK][KING] == bb_Square(60);
+
+    // Black rook on h8(63), no rook on a8 because knight was moved
+    // Actually FEN says "rnbqk1nr" so rook is on a8 and h8
+    Success &= BS.Pieces[BLACK][ROOK] == (bb_Square(56) | bb_Square(63));
+
+    return Success;
+}
+
+static bool test_bbParseFEN_midgame() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "r1bqkb1r/pppppppp/5n2/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 1 2";
+    bb_parseFEN(&BS, fen);
+
+    // White pawns on rank 2
+    Success &= BS.Pieces[WHITE][PAWN] == BB_RANK_2;
+
+    // Black pawns on rank 7
+    Success &= BS.Pieces[BLACK][PAWN] == BB_RANK_7;
+
+    // Black knight on f6 (rank 5, file 5 => 5*8+5=45)
+    Success &= BS.Pieces[BLACK][KNIGHT] == bb_Square(45);
+
+    // White: R(a1), N(b1), B(c1), Q(d1), K(e1), B(f1), skip 1, R(h1)
+    Success &= BS.Pieces[WHITE][KNIGHT] == bb_Square(1);
+    Success &= BS.Pieces[WHITE][BISHOP] == (bb_Square(2) | bb_Square(5));
+    Success &= BS.Pieces[WHITE][ROOK] == (bb_Square(0) | bb_Square(7));
+    Success &= BS.Pieces[WHITE][QUEEN] == bb_Square(3);
+    Success &= BS.Pieces[WHITE][KING] == bb_Square(4);
+
+    // Black: r(a8), skip 1, b(c8), q(d8), k(e8), b(f8), skip 1, r(h8)
+    Success &= BS.Pieces[BLACK][ROOK] == (bb_Square(56) | bb_Square(63));
+    Success &= BS.Pieces[BLACK][BISHOP] == (bb_Square(58) | bb_Square(61));
+    Success &= BS.Pieces[BLACK][QUEEN] == bb_Square(59);
+    Success &= BS.Pieces[BLACK][KING] == bb_Square(60);
+
+    // Active color white
+    Success &= BS.ActiveColor == WHITE;
+
+    // Halfmove clock = 1, fullmove = 2
+    Success &= BS.HalfmoveClock == 1;
+    Success &= BS.FullmoveNumber == 2;
+
+    // Total: white(8p+1n+2b+2r+1q+1k=15) + black(8p+1n+2b+2r+1q+1k=15) = 30
+    Success &= bb_popcount(BS.AllPieces) == 30;
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
 
@@ -725,6 +931,14 @@ int main() {
     Success &= test_Castling_roundTrip();
     Success &= test_Castling_clearUnset();
     Success &= test_Castling_constants();
+    Success &= test_bbParseFEN_startPosition();
+    Success &= test_bbParseFEN_enPassant();
+    Success &= test_bbParseFEN_reducedCastling();
+    Success &= test_bbParseFEN_noCastling();
+    Success &= test_bbParseFEN_activeColorBlack();
+    Success &= test_bbParseFEN_halfmoveFullmove();
+    Success &= test_bbParseFEN_kingsIndication();
+    Success &= test_bbParseFEN_midgame();
     assert(Success);
 
     return !Success;
