@@ -232,3 +232,96 @@ void bb_parseFEN(BitboardState *s, const char *fen) {
     // Update occupancy bitboards from piece bitboards
     bb_updateOccupancy(s);
 }
+
+// Serialize BitboardState back to FEN string
+char *bb_fenToString(BitboardState *s, char *buf, int bufSize) {
+    int pos = 0;
+
+    // --- Board section ---
+    const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
+
+    for (int rank = 7; rank >= 0; rank--) {
+        int emptyRun = 0;
+
+        for (int file = 0; file < 8; file++) {
+            int sq = rank * 8 + file;
+            Bitboard sqBB = bb_Square(sq);
+
+            bool found = false;
+            for (int color = 0; color < 2; color++) {
+                for (int pt = 0; pt < 6; pt++) {
+                    if (s->Pieces[color][pt] & sqBB) {
+                        char c = PieceChars[pt];
+                        if (color == BLACK) {
+                            c = c - 'A' + 'a';
+                        }
+                        if (emptyRun > 0) {
+                            pos += snprintf(buf + pos, bufSize - pos, "%d", emptyRun);
+                            emptyRun = 0;
+                        }
+                        pos += snprintf(buf + pos, bufSize - pos, "%c", c);
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+
+            if (!found) {
+                emptyRun++;
+            }
+        }
+
+        if (emptyRun > 0) {
+            pos += snprintf(buf + pos, bufSize - pos, "%d", emptyRun);
+        }
+
+        if (rank > 0) {
+            pos += snprintf(buf + pos, bufSize - pos, "/");
+        }
+    }
+
+    // --- Active color ---
+    pos += snprintf(buf + pos, bufSize - pos, " %c", s->ActiveColor == WHITE ? 'w' : 'b');
+
+    // --- Castling ---
+    pos += snprintf(buf + pos, bufSize - pos, " ");
+    bool hasCastling = false;
+    if (bb_hasCastleRight(s, BB_CASTLE_WK)) {
+        pos += snprintf(buf + pos, bufSize - pos, "K");
+        hasCastling = true;
+    }
+    if (bb_hasCastleRight(s, BB_CASTLE_WQ)) {
+        pos += snprintf(buf + pos, bufSize - pos, "Q");
+        hasCastling = true;
+    }
+    if (bb_hasCastleRight(s, BB_CASTLE_BK)) {
+        pos += snprintf(buf + pos, bufSize - pos, "k");
+        hasCastling = true;
+    }
+    if (bb_hasCastleRight(s, BB_CASTLE_BQ)) {
+        pos += snprintf(buf + pos, bufSize - pos, "q");
+        hasCastling = true;
+    }
+    if (!hasCastling) {
+        pos += snprintf(buf + pos, bufSize - pos, "-");
+    }
+
+    // --- En passant ---
+    pos += snprintf(buf + pos, bufSize - pos, " ");
+    if (s->EnPassant >= 0) {
+        int file = s->EnPassant % 8;
+        int rank = s->EnPassant / 8;
+        pos += snprintf(buf + pos, bufSize - pos, "%c%d", 'a' + file, rank + 1);
+    } else {
+        pos += snprintf(buf + pos, bufSize - pos, "-");
+    }
+
+    // --- Halfmove clock ---
+    pos += snprintf(buf + pos, bufSize - pos, " %u", s->HalfmoveClock);
+
+    // --- Fullmove number ---
+    pos += snprintf(buf + pos, bufSize - pos, " %u", s->FullmoveNumber);
+
+    return buf;
+}

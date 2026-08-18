@@ -904,6 +904,185 @@ static bool test_bbParseFEN_midgame() {
     return Success;
 }
 
+// --- bb_fenToString() tests ---
+
+static bool test_bbFenToString_startPosition() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_enPassant() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/Pp6/8/PPPPPPPP/RNBQKBNR b KQkq a3 0 1";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL ep: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_reducedCastling() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL castling: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_emptyBoard() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;
+    BS.ActiveColor = WHITE;
+    BS.Castling = 0;
+    BS.HalfmoveClock = 0;
+    BS.FullmoveNumber = 1;
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    const char *expected = "8/8/8/8/8/8/8/8 w - - 0 1";
+    Success &= strcmp(buf, expected) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL empty: got [%s]\nexpected[%s]\n", buf, expected);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_blackToMove() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL black: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_halfmoveFullmove() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 50 10";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL clocks: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_midgame() {
+    bool Success = true;
+
+    BitboardState BS;
+    const char *fen = "r1bqkb1r/pppppppp/5n2/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 1 2";
+    bb_parseFEN(&BS, fen);
+
+    char buf[256];
+    bb_fenToString(&BS, buf, sizeof(buf));
+
+    Success &= strcmp(buf, fen) == 0;
+    if (!Success) {
+        fprintf(stderr, "FAIL midgame: got [%s]\nexpected[%s]\n", buf, fen);
+    }
+
+    return Success;
+}
+
+static bool test_bbFenToString_roundtrip() {
+    bool Success = true;
+
+    // Several FEN positions to round-trip through parse -> serialize -> parse
+    const char *fens[] = {
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "8/8/8/8/8/8/8/8 w - - 0 1",
+        "8/8/8/8/8/8/8/8 b - - 0 1",
+        "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w Qkq - 0 1",
+        "rn1qkbn1/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    };
+    int n = sizeof(fens) / sizeof(fens[0]);
+
+    for (int i = 0; i < n; i++) {
+        BitboardState BS1, BS2;
+        char buf[256];
+
+        bb_parseFEN(&BS1, fens[i]);
+        bb_fenToString(&BS1, buf, sizeof(buf));
+        bb_parseFEN(&BS2, buf);
+
+        // Compare all bitboards
+        for (int c = 0; c < 2; c++) {
+            for (int pt = 0; pt < 6; pt++) {
+                Success &= BS1.Pieces[c][pt] == BS2.Pieces[c][pt];
+            }
+        }
+        for (int c = 0; c < 2; c++) {
+            Success &= BS1.Occupancy[c] == BS2.Occupancy[c];
+        }
+        Success &= BS1.AllPieces == BS2.AllPieces;
+        Success &= BS1.Blocked == BS2.Blocked;
+        Success &= BS1.EnPassant == BS2.EnPassant;
+        Success &= BS1.Castling == BS2.Castling;
+        Success &= BS1.ActiveColor == BS2.ActiveColor;
+        Success &= BS1.HalfmoveClock == BS2.HalfmoveClock;
+        Success &= BS1.FullmoveNumber == BS2.FullmoveNumber;
+
+        if (!Success) {
+            fprintf(stderr, "FAIL roundtrip #%d: [%s] -> [%s]\n", i, fens[i], buf);
+        }
+    }
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
 
@@ -939,6 +1118,14 @@ int main() {
     Success &= test_bbParseFEN_halfmoveFullmove();
     Success &= test_bbParseFEN_kingsIndication();
     Success &= test_bbParseFEN_midgame();
+    Success &= test_bbFenToString_startPosition();
+    Success &= test_bbFenToString_enPassant();
+    Success &= test_bbFenToString_reducedCastling();
+    Success &= test_bbFenToString_emptyBoard();
+    Success &= test_bbFenToString_blackToMove();
+    Success &= test_bbFenToString_halfmoveFullmove();
+    Success &= test_bbFenToString_midgame();
+    Success &= test_bbFenToString_roundtrip();
     assert(Success);
 
     return !Success;
