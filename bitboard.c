@@ -28,38 +28,31 @@ typedef enum {
     DIR_SOUTHWEST = -DIR_NORTHEAST
 } Direction;
 
-typedef struct {
-    Bitboard King;
-    Bitboard Queens;
-    Bitboard Rooks;
-    Bitboard Knights;
-    Bitboard Bishops;
-    Bitboard Pawns;
-} Pieces;
+typedef enum {
+    WHITE = 0,
+    BLACK = 1
+} Color;
+
+typedef enum {
+    PAWN = 0,
+    KNIGHT = 1,
+    BISHOP = 2,
+    ROOK = 3,
+    QUEEN = 4,
+    KING = 5
+} PieceType;
 
 typedef struct {
-    Pieces White;
-    Pieces Black;
-
-    bool BlackToMove;
-
-    // Castling rights
-    bool CR_WK; // White King
-    bool CR_WQ; // White Queen
-    bool CR_BK; // Black King
-    bool CR_BQ; // Black Queen
-
-    // En passant target
-    Bitboard EnPassant;
-
-    // 50-move rule
-    int HalfmoveClock;
-
-    // Starts at 0. (Normally starts at 1, stupid,
-    // I'd rather keep ZII, add 1 for display)
-    // Increments after black's move.
-    int FullmoveNumber;
+    Bitboard Pieces[2][6];  // [color][piece_type] — 12 piece bitboards
+    Bitboard Occupied;         // union of all Pieces
 } BitboardState;
+
+static inline void bb_updateOccupied(BitboardState *s) {
+    s->Occupied = 0;
+    for (int c = 0; c < 2; c++)
+        for (int pt = 0; pt < 6; pt++)
+            s->Occupied |= s->Pieces[c][pt];
+}
 
 Bitboard bb_shift(Bitboard B, Direction D) {
     // I tried to be a smartass here, but decided to prioritise readability.
