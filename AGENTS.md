@@ -21,7 +21,7 @@
 # TODO
 
 ## Bitboard Infrastructure
-[ ] 1. Add `bb_Square()` — create bitboard for a single square (maps Stockfish's `square_bb`)
+[x] 1. Add `bb_Square()` — create bitboard for a single square (maps Stockfish's `square_bb`)
 [ ] 2. Add `bb_popcount()` — count set bits using `__builtin_popcountll`
 [ ] 3. Add `bb_lsb()` / `bb_msb()` — get least/most significant bit index (De Bruijn or `__builtin_ctzll`)
 [ ] 4. Add `bb_pop_lsb()` — find and clear LSB; enables iterating all set squares in a bitboard
