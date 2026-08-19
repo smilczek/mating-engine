@@ -344,6 +344,9 @@ static Bitboard BB_PseudoAttacks_King[64];
 // Precomputed pawn attack bitboards per color per square [color][square]
 static Bitboard BB_PawnAttacks[2][64];
 
+// Precomputed legal pawn push squares per color per square [color][square]
+static Bitboard BB_PawnPushes[2][64];
+
 // King move offsets: all 8 adjacent squares (file_delta, rank_delta)
 static const int KingOffsets[8][2] = {
     {-1, -1}, {0, -1}, {1, -1},
@@ -421,6 +424,36 @@ void bb_initPseudoAttacks(void) {
             }
         }
         BB_PawnAttacks[BLACK][sq] = bAtk;
+    }
+
+    // Initialize pawn push tables
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+
+        // White pawn pushes: north (+8 per rank)
+        Bitboard wPushes = 0ULL;
+        if (rank < 7) {
+            // Single push
+            wPushes |= ((Bitboard)1 << ((rank + 1) * 8 + file));
+        }
+        if (rank == 1) {
+            // Double push from starting rank
+            wPushes |= ((Bitboard)1 << ((rank + 2) * 8 + file));
+        }
+        BB_PawnPushes[WHITE][sq] = wPushes;
+
+        // Black pawn pushes: south (-8 per rank)
+        Bitboard bPushes = 0ULL;
+        if (rank > 0) {
+            // Single push
+            bPushes |= ((Bitboard)1 << ((rank - 1) * 8 + file));
+        }
+        if (rank == 6) {
+            // Double push from starting rank
+            bPushes |= ((Bitboard)1 << ((rank - 2) * 8 + file));
+        }
+        BB_PawnPushes[BLACK][sq] = bPushes;
     }
 }
 

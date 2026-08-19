@@ -1699,6 +1699,212 @@ static bool test_bbPawnAttacks_allPopcounts() {
     return Success;
 }
 
+static bool test_bbPawnPushes_whiteE2_doublePush() {
+    bool Success = true;
+
+    // White pawn at e2 (sq=14): pushes to e3(22) and e4(30) — 2 bits (double push from rank 1)
+    Bitboard pushes = BB_PawnPushes[WHITE][14];
+    Success &= bb_popcount(pushes) == 2;
+    Success &= (pushes & bb_Square(22)) != 0ULL;  // e3
+    Success &= (pushes & bb_Square(30)) != 0ULL;  // e4
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_whiteE3_singlePush() {
+    bool Success = true;
+
+    // White pawn at e3 (sq=22): pushes only to e4(30) — 1 bit (no double push)
+    Bitboard pushes = BB_PawnPushes[WHITE][22];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(30)) != 0ULL;  // e4
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_whiteE7_promoRank() {
+    bool Success = true;
+
+    // White pawn at e7 (sq=46): pushes only to e8(54) — 1 bit (promotion rank)
+    Bitboard pushes = BB_PawnPushes[WHITE][46];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(54)) != 0ULL;  // e8
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_whiteA1_rank0() {
+    bool Success = true;
+
+    // White pawn at a1 (sq=0): on rank 0, can only single push to a2(8). No double push (not on starting rank 1).
+    Bitboard pushes = BB_PawnPushes[WHITE][0];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(8)) != 0ULL;   // a2
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_whiteRank8_none() {
+    bool Success = true;
+
+    // White pawn on rank 8 (top): no forward squares, no pushes
+    for (int file = 0; file < 8; ++file) {
+        int sq = 7 * 8 + file;
+        Success &= BB_PawnPushes[WHITE][sq] == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_blackE7_doublePush() {
+    bool Success = true;
+
+    // Black pawn at e7 (sq=50): pushes to e6(42) and e5(34) — 2 bits
+    Bitboard pushes = BB_PawnPushes[BLACK][50];
+    Success &= bb_popcount(pushes) == 2;
+    Success &= (pushes & bb_Square(42)) != 0ULL;  // e6
+    Success &= (pushes & bb_Square(34)) != 0ULL;  // e5
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_blackE6_singlePush() {
+    bool Success = true;
+
+    // Black pawn at e6 (sq=42): pushes only to e5(34) — 1 bit
+    Bitboard pushes = BB_PawnPushes[BLACK][42];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(34)) != 0ULL;  // e5
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_blackA8_rank0() {
+    bool Success = true;
+
+    // Black pawn at a8 (sq=56): on rank 7, can only single push to a7(48). No double push (not on starting rank 6).
+    Bitboard pushes = BB_PawnPushes[BLACK][56];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(48)) != 0ULL;  // a7
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_hFile_white() {
+    bool Success = true;
+
+    // White pawn at h2 (sq=15): pushes to h3(23) and h4(31) — 2 bits
+    Bitboard pushes = BB_PawnPushes[WHITE][15];
+    Success &= bb_popcount(pushes) == 2;
+    Success &= (pushes & bb_Square(23)) != 0ULL;  // h3
+    Success &= (pushes & bb_Square(31)) != 0ULL;  // h4
+
+    // White pawn at h3 (sq=23): pushes only to h4(31) — 1 bit
+    pushes = BB_PawnPushes[WHITE][23];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(31)) != 0ULL;  // h4
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_hFile_black() {
+    bool Success = true;
+
+    // Black pawn at h7 (sq=55): pushes to h6(47) and h5(39) — 2 bits
+    Bitboard pushes = BB_PawnPushes[BLACK][55];
+    Success &= bb_popcount(pushes) == 2;
+    Success &= (pushes & bb_Square(47)) != 0ULL;  // h6
+    Success &= (pushes & bb_Square(39)) != 0ULL;  // h5
+
+    // Black pawn at h6 (sq=47): pushes only to h5(39) — 1 bit
+    pushes = BB_PawnPushes[BLACK][47];
+    Success &= bb_popcount(pushes) == 1;
+    Success &= (pushes & bb_Square(39)) != 0ULL;  // h5
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_noOffBoardBits() {
+    bool Success = true;
+
+    // For every square and both colors, all set bits must be on-board (< 64)
+    for (int color = 0; color < 2; ++color) {
+        for (int sq = 0; sq < 64; ++sq) {
+            Bitboard pushes = BB_PawnPushes[color][sq];
+            Bitboard tmp = pushes;
+            while (tmp) {
+                int t = bb_lsb(tmp);
+                Success &= t >= 0 && t < 64;
+                bb_pop_lsb(&tmp);
+            }
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_allPopcounts() {
+    bool Success = true;
+
+    // Verify expected popcount for all 64 squares, both colors
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+
+        // White pawn pushes
+        int wExpected = 0;
+        if (rank < 7) wExpected++;           // single push
+        if (rank == 1) wExpected++;            // double push from rank 1
+        Success &= bb_popcount(BB_PawnPushes[WHITE][sq]) == wExpected;
+
+        // Black pawn pushes
+        int bExpected = 0;
+        if (rank > 0) bExpected++;             // single push
+        if (rank == 6) bExpected++;             // double push from rank 6
+        Success &= bb_popcount(BB_PawnPushes[BLACK][sq]) == bExpected;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_symmetry() {
+    bool Success = true;
+
+    // Mirror: white pushes at sq and black pushes at (63-sq) should be mirrored
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard wPushes = BB_PawnPushes[WHITE][sq];
+        Bitboard bPushes = BB_PawnPushes[BLACK][63 - sq];
+        Bitboard wMirrored = 0;
+        for (int i = 0; i < 64; ++i) {
+            if ((wPushes >> i) & 1) {
+                wMirrored |= ((Bitboard)1 << (63 - i));
+            }
+        }
+        Success &= wMirrored == bPushes;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnPushes_sameFile() {
+    bool Success = true;
+
+    // Pushes must stay on the same file as the pawn
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        Bitboard fileMask = 0ULL;
+        for (int r = 0; r < 8; ++r) {
+            fileMask |= ((Bitboard)1 << (r * 8 + file));
+        }
+        for (int color = 0; color < 2; ++color) {
+            Bitboard pushes = BB_PawnPushes[color][sq];
+            Success &= (pushes & ~fileMask) == 0ULL;  // no bits outside the pawn's file
+        }
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -1731,6 +1937,20 @@ int main() {
     Success &= test_bbPawnAttacks_whiteRank8_none();
     Success &= test_bbPawnAttacks_blackRank8_none();
     Success &= test_bbPawnAttacks_allPopcounts();
+    Success &= test_bbPawnPushes_whiteE2_doublePush();
+    Success &= test_bbPawnPushes_whiteE3_singlePush();
+    Success &= test_bbPawnPushes_whiteE7_promoRank();
+    Success &= test_bbPawnPushes_whiteA1_rank0();
+    Success &= test_bbPawnPushes_whiteRank8_none();
+    Success &= test_bbPawnPushes_blackE7_doublePush();
+    Success &= test_bbPawnPushes_blackE6_singlePush();
+    Success &= test_bbPawnPushes_blackA8_rank0();
+    Success &= test_bbPawnPushes_hFile_white();
+    Success &= test_bbPawnPushes_hFile_black();
+    Success &= test_bbPawnPushes_noOffBoardBits();
+    Success &= test_bbPawnPushes_allPopcounts();
+    Success &= test_bbPawnPushes_symmetry();
+    Success &= test_bbPawnPushes_sameFile();
     Success &= test_shift();
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
