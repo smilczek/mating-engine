@@ -341,6 +341,9 @@ static const int KnightOffsets[8][2] = {
 // Precomputed king attack bitboards for each square (64 entries)
 static Bitboard BB_PseudoAttacks_King[64];
 
+// Precomputed pawn attack bitboards per color per square [color][square]
+static Bitboard BB_PawnAttacks[2][64];
+
 // King move offsets: all 8 adjacent squares (file_delta, rank_delta)
 static const int KingOffsets[8][2] = {
     {-1, -1}, {0, -1}, {1, -1},
@@ -384,6 +387,40 @@ void bb_initPseudoAttacks(void) {
         }
 
         BB_PseudoAttacks_King[sq] = attacks;
+    }
+
+    // Initialize pawn attack tables
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+
+        // White pawn attacks: NE (rank+1, file+1) and NW (rank+1, file-1)
+        Bitboard wAtk = 0ULL;
+        if (rank < 7) {
+            if (file > 0) {
+                int nw = (rank + 1) * 8 + (file - 1);
+                wAtk |= ((Bitboard)1 << nw);
+            }
+            if (file < 7) {
+                int ne = (rank + 1) * 8 + (file + 1);
+                wAtk |= ((Bitboard)1 << ne);
+            }
+        }
+        BB_PawnAttacks[WHITE][sq] = wAtk;
+
+        // Black pawn attacks: SE (rank-1, file+1) and SW (rank-1, file-1)
+        Bitboard bAtk = 0ULL;
+        if (rank > 0) {
+            if (file > 0) {
+                int sw = (rank - 1) * 8 + (file - 1);
+                bAtk |= ((Bitboard)1 << sw);
+            }
+            if (file < 7) {
+                int se = (rank - 1) * 8 + (file + 1);
+                bAtk |= ((Bitboard)1 << se);
+            }
+        }
+        BB_PawnAttacks[BLACK][sq] = bAtk;
     }
 }
 

@@ -1521,6 +1521,184 @@ static bool test_bbPseudoAttacksKing_expectedPopcounts() {
     return Success;
 }
 
+static bool test_bbPawnAttacks_whiteCenter() {
+    bool Success = true;
+
+    // White pawn at e2 (sq=14): attacks f3(22) and d3(20) — exactly 2 bits
+    Bitboard attacks = BB_PawnAttacks[WHITE][14];
+    Success &= bb_popcount(attacks) == 2;
+    Success &= (attacks & bb_Square(22)) != 0ULL;  // f3
+    Success &= (attacks & bb_Square(20)) != 0ULL;  // d3
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_whiteEdgeH() {
+    bool Success = true;
+
+    // White pawn at h2 (sq=7): attacks only g3(15) — 1 bit (edge)
+    Bitboard attacks = BB_PawnAttacks[WHITE][7];
+    Success &= bb_popcount(attacks) == 1;
+    Success &= (attacks & bb_Square(15)) != 0ULL;  // g3
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_whiteEdgeA() {
+    bool Success = true;
+
+    // White pawn at a2 (sq=0): attacks only b3(11) — 1 bit (edge)
+    Bitboard attacks = BB_PawnAttacks[WHITE][0];
+    Success &= bb_popcount(attacks) == 1;
+    Success &= (attacks & bb_Square(11)) != 0ULL;  // b3
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_blackCenter() {
+    bool Success = true;
+
+    // Black pawn at e7 (sq=50): attacks f6(42) and d6(40) — exactly 2 bits
+    Bitboard attacks = BB_PawnAttacks[BLACK][50];
+    Success &= bb_popcount(attacks) == 2;
+    Success &= (attacks & bb_Square(42)) != 0ULL;  // f6
+    Success &= (attacks & bb_Square(40)) != 0ULL;  // d6
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_blackEdgeH() {
+    bool Success = true;
+
+    // Black pawn at h7 (sq=55): attacks only g6(47) — 1 bit
+    Bitboard attacks = BB_PawnAttacks[BLACK][55];
+    Success &= bb_popcount(attacks) == 1;
+    Success &= (attacks & bb_Square(47)) != 0ULL;  // g6
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_blackEdgeA() {
+    bool Success = true;
+
+    // Black pawn at a7 (sq=48): attacks only b6(39) — 1 bit
+    Bitboard attacks = BB_PawnAttacks[BLACK][48];
+    Success &= bb_popcount(attacks) == 1;
+    Success &= (attacks & bb_Square(39)) != 0ULL;  // b6
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_symmetry() {
+    bool Success = true;
+
+    // White pawn at rank N attacks rank N+1 diagonals
+    // Black pawn at rank M attacks rank M-1 diagonals
+    // Mirror: white at sq and black at (63-sq) should produce mirrored attack sets
+
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard wAtk = BB_PawnAttacks[WHITE][sq];
+        Bitboard bAtk = BB_PawnAttacks[BLACK][63 - sq];
+        // Mirroring: flip all bits of wAtk (reverse bit order) should equal bAtk
+        Bitboard wMirrored = 0;
+        for (int i = 0; i < 64; ++i) {
+            if ((wAtk >> i) & 1) {
+                wMirrored |= ((Bitboard)1 << (63 - i));
+            }
+        }
+        Success &= wMirrored == bAtk;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_noOffBoardBits() {
+    bool Success = true;
+
+    // For every square and both colors, all set bits must be on-board (< 64)
+    for (int color = 0; color < 2; ++color) {
+        for (int sq = 0; sq < 64; ++sq) {
+            Bitboard attacks = BB_PawnAttacks[color][sq];
+            Bitboard tmp = attacks;
+            while (tmp) {
+                int t = bb_lsb(tmp);
+                Success &= t >= 0 && t < 64;
+                bb_pop_lsb(&tmp);
+            }
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_whiteRank1() {
+    bool Success = true;
+
+    // White pawns on rank 1 (bottom row): attacks go to rank 2
+    // c1 (sq=2): attacks b2(9) and d2(10)
+    Bitboard attacks = BB_PawnAttacks[WHITE][2];
+    Success &= bb_popcount(attacks) == 2;
+    Success &= (attacks & bb_Square(9)) != 0ULL;   // b2
+    Success &= (attacks & bb_Square(10)) != 0ULL;  // d2
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_whiteRank8_none() {
+    bool Success = true;
+
+    // White pawn on rank 8: no forward squares exist, so no attacks
+    for (int file = 0; file < 8; ++file) {
+        int sq = 8 * 7 + file;  // rank 8 (index 7)
+        Success &= BB_PawnAttacks[WHITE][sq] == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_blackRank8_none() {
+    bool Success = true;
+
+    // Black pawn on rank 1 (index 0): no backward squares exist, so no attacks
+    for (int file = 0; file < 8; ++file) {
+        Success &= BB_PawnAttacks[BLACK][file] == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbPawnAttacks_allPopcounts() {
+    bool Success = true;
+
+    // Verify expected popcount patterns for all 64 squares, both colors
+    // Interior squares (not on a/h file): 2 attacks
+    // Edge squares (a/h file, not on rank 1/8 for white, not rank 1/8 for black): 1 attack
+    // Off-board direction: 0 attacks
+
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+
+        // White pawn attacks
+        int wExpected = 0;
+        if (rank < 7) {  // Can attack forward
+            if (file > 0) wExpected++;  // NW
+            if (file < 7) wExpected++;  // NE
+        }
+        Success &= bb_popcount(BB_PawnAttacks[WHITE][sq]) == wExpected;
+
+        // Black pawn attacks
+        int bExpected = 0;
+        if (rank > 0) {  // Can attack backward
+            if (file > 0) bExpected++;  // SW
+            if (file < 7) bExpected++;  // SE
+        }
+        Success &= bb_popcount(BB_PawnAttacks[BLACK][sq]) == bExpected;
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -1541,6 +1719,18 @@ int main() {
     Success &= test_bbPseudoAttacksKing_symmetry();
     Success &= test_bbPseudoAttacksKing_noSelf();
     Success &= test_bbPseudoAttacksKing_expectedPopcounts();
+    Success &= test_bbPawnAttacks_whiteCenter();
+    Success &= test_bbPawnAttacks_whiteEdgeH();
+    Success &= test_bbPawnAttacks_whiteEdgeA();
+    Success &= test_bbPawnAttacks_blackCenter();
+    Success &= test_bbPawnAttacks_blackEdgeH();
+    Success &= test_bbPawnAttacks_blackEdgeA();
+    Success &= test_bbPawnAttacks_symmetry();
+    Success &= test_bbPawnAttacks_noOffBoardBits();
+    Success &= test_bbPawnAttacks_whiteRank1();
+    Success &= test_bbPawnAttacks_whiteRank8_none();
+    Success &= test_bbPawnAttacks_blackRank8_none();
+    Success &= test_bbPawnAttacks_allPopcounts();
     Success &= test_shift();
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
