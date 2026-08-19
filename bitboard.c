@@ -549,6 +549,10 @@ Bitboard bb_slidingAttack_rook(int sq, Bitboard occupied) {
     return attacks;
 }
 
+Bitboard bb_slidingAttack_queen(int sq, Bitboard occupied) {
+    return bb_slidingAttack_bishop(sq, occupied) | bb_slidingAttack_rook(sq, occupied);
+}
+
 void bb_printBoard(BitboardState *s) {
     const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
 

@@ -2545,6 +2545,125 @@ static bool test_bbSlidingRook_firstOccupiedBlocks() {
     return Success;
 }
 
+// --- bb_slidingAttack_queen() tests ---
+
+static bool test_bbSlidingQueen_emptyBoard_d4() {
+    bool Success = true;
+
+    // Queen at d4 (sq=27) on empty board: bishop(13) + rook(14) = 27 squares
+    Bitboard attacks = bb_slidingAttack_queen(27, 0ULL);
+    Success &= bb_popcount(attacks) == 27;
+
+    // Must equal union of bishop and rook attacks
+    Bitboard expected = bb_slidingAttack_bishop(27, 0ULL) | bb_slidingAttack_rook(27, 0ULL);
+    Success &= attacks == expected;
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_emptyBoard_a1() {
+    bool Success = true;
+
+    // Queen at a1 (sq=0): bishop(7) + rook(14) = 21 squares
+    Bitboard attacks = bb_slidingAttack_queen(0, 0ULL);
+    Success &= bb_popcount(attacks) == 21;
+
+    Bitboard expected = bb_slidingAttack_bishop(0, 0ULL) | bb_slidingAttack_rook(0, 0ULL);
+    Success &= attacks == expected;
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_blockedDiagonalAndRank() {
+    bool Success = true;
+
+    // Queen at d4 (sq=27). Blocker on c5(34) blocks NW diag for bishop.
+    // Blocker on d6(43) blocks north for rook.
+    // These blockers are on different rays so don't interfere.
+    Bitboard occupied = bb_Square(34) | bb_Square(43);
+    Bitboard attacks = bb_slidingAttack_queen(27, occupied);
+
+    // Bishop NW diag: c5(34) capturable, b6(41) and a7(48) blocked
+    Success &= (attacks & bb_Square(34)) != 0ULL;   // c5 capturable
+    Success &= (attacks & bb_Square(41)) == 0ULL;   // b6 blocked by c5
+    Success &= (attacks & bb_Square(48)) == 0ULL;   // a7 blocked by c5
+
+    // Rook north: d5(35) reachable, d6(43) capturable, d7-d8 blocked
+    Success &= (attacks & bb_Square(35)) != 0ULL;   // d5 reachable
+    Success &= (attacks & bb_Square(43)) != 0ULL;   // d6 capturable
+    Success &= (attacks & bb_Square(51)) == 0ULL;   // d7 blocked by d6
+    Success &= (attacks & bb_Square(59)) == 0ULL;   // d8 blocked by d6
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_equalsUnionAllSquares() {
+    bool Success = true;
+
+    // For every square on empty board, queen attacks must equal bishop | rook
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard qAtk = bb_slidingAttack_queen(sq, 0ULL);
+        Bitboard expected = bb_slidingAttack_bishop(sq, 0ULL) | bb_slidingAttack_rook(sq, 0ULL);
+        Success &= qAtk == expected;
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_equalsUnionWithOccupancy() {
+    bool Success = true;
+
+    // Test with various occupancy patterns
+    Bitboard occupancies[] = {
+        0ULL,                                          // empty
+        bb_Square(35),                                 // single center piece
+        bb_Square(0) | bb_Square(63),               // two corners
+        BB_RANK_1 | BB_RANK_8,                        // two ranks full
+        BB_FILE_A | BB_FILE_H,                        // two files full
+        0xAAAAAAAAAAAAAAAAULL,                         // checkerboard-ish
+        0x5555555555555555ULL,                      // alternate checkerboard
+    };
+    int n = sizeof(occupancies) / sizeof(occupancies[0]);
+
+    for (int occIdx = 0; occIdx < n; ++occIdx) {
+        Bitboard occ = occupancies[occIdx];
+        for (int sq = 0; sq < 64; ++sq) {
+            Bitboard qAtk = bb_slidingAttack_queen(sq, occ);
+            Bitboard expected = bb_slidingAttack_bishop(sq, occ) | bb_slidingAttack_rook(sq, occ);
+            Success &= qAtk == expected;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_noSelf() {
+    bool Success = true;
+
+    // Queen's own square must never appear in attack bitboard
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard occupied = bb_Square(sq);
+        Bitboard attacks = bb_slidingAttack_queen(sq, occupied);
+        Success &= (attacks & bb_Square(sq)) == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingQueen_subsetOfMaxCoverage() {
+    bool Success = true;
+
+    // Queen attacks with any occupancy must be subset of max coverage (bishop | rook pseudo-attacks)
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard maxCoverage = BB_PseudoAttacks_Bishop[sq] | BB_PseudoAttacks_Rook[sq];
+        Bitboard occupied = 0xACEFACEACEACEACEULL;
+        Bitboard attacks = bb_slidingAttack_queen(sq, occupied);
+        Success &= (attacks & ~maxCoverage) == 0ULL;
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -2552,7 +2671,7 @@ int main() {
 
     bb_initPseudoAttacks();
 
-    Success &= test_bbPseudoAttacksKnight_corners();
+Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
     Success &= test_bbPseudoAttacksKnight_onBoard();
     Success &= test_bbPseudoAttacksKnight_symmetry();
@@ -2669,6 +2788,13 @@ int main() {
     Success &= test_bbSlidingRook_allSquares_emptyMatchesMax();
     Success &= test_bbSlidingRook_noSelf();
     Success &= test_bbSlidingRook_firstOccupiedBlocks();
+    Success &= test_bbSlidingQueen_emptyBoard_d4();
+    Success &= test_bbSlidingQueen_emptyBoard_a1();
+    Success &= test_bbSlidingQueen_blockedDiagonalAndRank();
+    Success &= test_bbSlidingQueen_equalsUnionAllSquares();
+    Success &= test_bbSlidingQueen_equalsUnionWithOccupancy();
+    Success &= test_bbSlidingQueen_noSelf();
+    Success &= test_bbSlidingQueen_subsetOfMaxCoverage();
     assert(Success);
 
     return !Success;
