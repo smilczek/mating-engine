@@ -338,6 +338,16 @@ static const int KnightOffsets[8][2] = {
     {-1, 2},  {1, 2}
 };
 
+// Precomputed king attack bitboards for each square (64 entries)
+static Bitboard BB_PseudoAttacks_King[64];
+
+// King move offsets: all 8 adjacent squares (file_delta, rank_delta)
+static const int KingOffsets[8][2] = {
+    {-1, -1}, {0, -1}, {1, -1},
+    {-1,  0},         {1,  0},
+    {-1,  1}, {0,  1}, {1,  1}
+};
+
 void bb_initPseudoAttacks(void) {
     for (int sq = 0; sq < 64; ++sq) {
         int file = sq % 8;
@@ -355,6 +365,25 @@ void bb_initPseudoAttacks(void) {
         }
 
         BB_PseudoAttacks_Knight[sq] = attacks;
+    }
+
+    // Initialize king pseudo-attack tables
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+        Bitboard attacks = 0ULL;
+
+        for (int i = 0; i < 8; ++i) {
+            int nf = file + KingOffsets[i][0];
+            int nr = rank + KingOffsets[i][1];
+
+            if (nf >= 0 && nf < 8 && nr >= 0 && nr < 8) {
+                int targetSq = nr * 8 + nf;
+                attacks |= ((Bitboard)1 << targetSq);
+            }
+        }
+
+        BB_PseudoAttacks_King[sq] = attacks;
     }
 }
 

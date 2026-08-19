@@ -1346,6 +1346,181 @@ static bool test_bbPseudoAttacksKnight_expectedPopcounts() {
 }
 
 
+static bool test_bbPseudoAttacksKing_corners() {
+    bool Success = true;
+
+    // a1 (sq 0): attacks b1(1), a2(8), b2(9) — exactly 3 attacks
+    Bitboard a1_attacks = BB_PseudoAttacks_King[0];
+    Success &= bb_popcount(a1_attacks) == 3;
+    Success &= (a1_attacks & bb_Square(1)) != 0ULL;  // b1
+    Success &= (a1_attacks & bb_Square(8)) != 0ULL;  // a2
+    Success &= (a1_attacks & bb_Square(9)) != 0ULL;  // b2
+
+    // h1 (sq 7): attacks g1(6), g2(14), h2(15) — exactly 3 attacks
+    Bitboard h1_attacks = BB_PseudoAttacks_King[7];
+    Success &= bb_popcount(h1_attacks) == 3;
+    Success &= (h1_attacks & bb_Square(6)) != 0ULL;  // g1
+    Success &= (h1_attacks & bb_Square(14)) != 0ULL; // g2
+    Success &= (h1_attacks & bb_Square(15)) != 0ULL; // h2
+
+    // a8 (sq 56): attacks b8(57), a7(48), b7(49) — exactly 3 attacks
+    Bitboard a8_attacks = BB_PseudoAttacks_King[56];
+    Success &= bb_popcount(a8_attacks) == 3;
+    Success &= (a8_attacks & bb_Square(57)) != 0ULL; // b8
+    Success &= (a8_attacks & bb_Square(48)) != 0ULL; // a7
+    Success &= (a8_attacks & bb_Square(49)) != 0ULL; // b7
+
+    // h8 (sq 63): attacks g8(55), h7(56), g7(57) — exactly 3 attacks
+    Bitboard h8_attacks = BB_PseudoAttacks_King[63];
+    Success &= bb_popcount(h8_attacks) == 3;
+    Success &= (h8_attacks & bb_Square(55)) != 0ULL; // g8
+    Success &= (h8_attacks & bb_Square(56)) != 0ULL; // h7
+    Success &= (h8_attacks & bb_Square(57)) != 0ULL; // g7
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_center() {
+    bool Success = true;
+
+    // d4 (sq 27): center square should have 8 attacks
+    Bitboard d4_attacks = BB_PseudoAttacks_King[27];
+    Success &= bb_popcount(d4_attacks) == 8;
+
+    // Verify each of the 8 target squares
+    Success &= (d4_attacks & bb_Square(18)) != 0ULL;  // b3
+    Success &= (d4_attacks & bb_Square(19)) != 0ULL;  // c3
+    Success &= (d4_attacks & bb_Square(20)) != 0ULL;  // d3
+    Success &= (d4_attacks & bb_Square(26)) != 0ULL;  // c4
+    Success &= (d4_attacks & bb_Square(28)) != 0ULL;  // e4
+    Success &= (d4_attacks & bb_Square(34)) != 0ULL;  // c5
+    Success &= (d4_attacks & bb_Square(35)) != 0ULL;  // d5
+    Success &= (d4_attacks & bb_Square(36)) != 0ULL;  // e5
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_edgeSquares() {
+    bool Success = true;
+
+    // Edge non-corner squares have 5 attacks
+    // a-file edge (not corner): a2(8) has 5 neighbors
+    Success &= bb_popcount(BB_PseudoAttacks_King[8]) == 5;   // a2
+    Success &= bb_popcount(BB_PseudoAttacks_King[16]) == 5;  // a3
+    Success &= bb_popcount(BB_PseudoAttacks_King[48]) == 5;   // a7
+
+    // h-file edge (not corner): h2(15) has 5 neighbors
+    Success &= bb_popcount(BB_PseudoAttacks_King[15]) == 5;   // h2
+    Success &= bb_popcount(BB_PseudoAttacks_King[23]) == 5;   // h3
+    Success &= bb_popcount(BB_PseudoAttacks_King[55]) == 5;    // h7
+
+    // Rank 1 edge (not corner): b1(1) has 5 neighbors
+    Success &= bb_popcount(BB_PseudoAttacks_King[1]) == 5;   // b1
+    Success &= bb_popcount(BB_PseudoAttacks_King[2]) == 5;   // c1
+    Success &= bb_popcount(BB_PseudoAttacks_King[5]) == 5;    // f1
+    Success &= bb_popcount(BB_PseudoAttacks_King[6]) == 5;     // g1
+
+    // Rank 8 edge (not corner): b8(57) has 5 neighbors
+    Success &= bb_popcount(BB_PseudoAttacks_King[57]) == 5;   // b8
+    Success &= bb_popcount(BB_PseudoAttacks_King[58]) == 5;   // c8
+    Success &= bb_popcount(BB_PseudoAttacks_King[61]) == 5;    // f8
+    Success &= bb_popcount(BB_PseudoAttacks_King[62]) == 5;     // g8
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_nearCorner() {
+    bool Success = true;
+
+    // Near-corner squares like b2(9) have 8 neighbors (all 8 surrounding squares exist)
+    Success &= bb_popcount(BB_PseudoAttacks_King[9]) == 8;    // b2
+    Success &= bb_popcount(BB_PseudoAttacks_King[14]) == 8;   // g2
+    Success &= bb_popcount(BB_PseudoAttacks_King[57]) == 5;    // b8 — edge, not near-corner interior
+    Success &= bb_popcount(BB_PseudoAttacks_King[62]) == 5;     // g8 — edge, not near-corner interior
+    Success &= bb_popcount(BB_PseudoAttacks_King[49]) == 8;     // b7
+    Success &= bb_popcount(BB_PseudoAttacks_King[54]) == 8;     // g7
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_onBoard() {
+    bool Success = true;
+
+    // For every square, all set bits must be on-board (< 64)
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = BB_PseudoAttacks_King[sq];
+        Bitboard tmp = attacks;
+        while (tmp) {
+            int t = bb_lsb(tmp);
+            Success &= t >= 0 && t < 64;
+            bb_pop_lsb(&tmp);
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_symmetry() {
+    bool Success = true;
+
+    // For every pair (sq, t): if t is attacked by sq, then sq must be attacked by t
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = BB_PseudoAttacks_King[sq];
+        Bitboard tmp = attacks;
+        while (tmp) {
+            int t = bb_pop_lsb(&tmp);
+            Success &= (BB_PseudoAttacks_King[t] & bb_Square(sq)) != 0ULL;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_noSelf() {
+    bool Success = true;
+
+    // No square should attack itself
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= (BB_PseudoAttacks_King[sq] & bb_Square(sq)) == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKing_expectedPopcounts() {
+    bool Success = true;
+
+    // Corners: 3 attacks each
+    Success &= bb_popcount(BB_PseudoAttacks_King[0]) == 3;   // a1
+    Success &= bb_popcount(BB_PseudoAttacks_King[7]) == 3;   // h1
+    Success &= bb_popcount(BB_PseudoAttacks_King[56]) == 3;   // a8
+    Success &= bb_popcount(BB_PseudoAttacks_King[63]) == 3;   // h8
+
+    // Edges (non-corner): 5 attacks each
+    Success &= bb_popcount(BB_PseudoAttacks_King[1]) == 5;   // b1
+    Success &= bb_popcount(BB_PseudoAttacks_King[6]) == 5;   // g1
+    Success &= bb_popcount(BB_PseudoAttacks_King[8]) == 5;   // a2
+    Success &= bb_popcount(BB_PseudoAttacks_King[15]) == 5;  // h2
+    Success &= bb_popcount(BB_PseudoAttacks_King[48]) == 5;   // a7
+    Success &= bb_popcount(BB_PseudoAttacks_King[55]) == 5;   // h7
+    Success &= bb_popcount(BB_PseudoAttacks_King[57]) == 5;   // b8
+    Success &= bb_popcount(BB_PseudoAttacks_King[62]) == 5;   // g8
+
+    // Near-corners (b2, b7, g2, g7): 8 attacks each
+    Success &= bb_popcount(BB_PseudoAttacks_King[9]) == 8;    // b2
+    Success &= bb_popcount(BB_PseudoAttacks_King[14]) == 8;   // g2
+    Success &= bb_popcount(BB_PseudoAttacks_King[49]) == 8;    // b7
+    Success &= bb_popcount(BB_PseudoAttacks_King[54]) == 8;    // g7
+
+    // Inner squares (not on edge): 8 attacks each
+    Success &= bb_popcount(BB_PseudoAttacks_King[11]) == 8;   // d3
+    Success &= bb_popcount(BB_PseudoAttacks_King[27]) == 8;   // d4
+    Success &= bb_popcount(BB_PseudoAttacks_King[35]) == 8;   // e4
+    Success &= bb_popcount(BB_PseudoAttacks_King[36]) == 8;    // e5
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -1358,6 +1533,14 @@ int main() {
     Success &= test_bbPseudoAttacksKnight_onBoard();
     Success &= test_bbPseudoAttacksKnight_symmetry();
     Success &= test_bbPseudoAttacksKnight_expectedPopcounts();
+    Success &= test_bbPseudoAttacksKing_corners();
+    Success &= test_bbPseudoAttacksKing_center();
+    Success &= test_bbPseudoAttacksKing_edgeSquares();
+    Success &= test_bbPseudoAttacksKing_nearCorner();
+    Success &= test_bbPseudoAttacksKing_onBoard();
+    Success &= test_bbPseudoAttacksKing_symmetry();
+    Success &= test_bbPseudoAttacksKing_noSelf();
+    Success &= test_bbPseudoAttacksKing_expectedPopcounts();
     Success &= test_shift();
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
