@@ -325,3 +325,61 @@ char *bb_fenToString(BitboardState *s, char *buf, int bufSize) {
 
     return buf;
 }
+
+void bb_printBoard(BitboardState *s) {
+    const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
+
+    // Header with file labels
+    printf("   a b c d e f g h\n");
+    printf("  +---+---+---+---+---+---+---+---+\n");
+
+    for (int rank = 7; rank >= 0; rank--) {
+        printf("%d |", rank + 1);
+        for (int file = 0; file < 8; file++) {
+            int sq = rank * 8 + file;
+            Bitboard sqBB = bb_Square(sq);
+
+            char ch = '.';
+            bool found = false;
+
+            // Check en passant first
+            if (sq == s->EnPassant) {
+                ch = '+';
+                found = true;
+            }
+
+            // Check all piece bitboards
+            for (int color = 0; color < 2 && !found; color++) {
+                for (int pt = 0; pt < 6; pt++) {
+                    if (s->Pieces[color][pt] & sqBB) {
+                        ch = PieceChars[pt];
+                        if (color == BLACK) {
+                            ch = ch - 'A' + 'a';
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            printf(" %c |", ch);
+        }
+        printf("\n");
+        printf("  +---+---+---+---+---+---+---+---+\n");
+    }
+
+    printf("   a b c d e f g h\n");
+
+    // Metadata line
+    printf("Active: %s, Castling: ", s->ActiveColor == WHITE ? "White" : "Black");
+    if (s->Castling == 0) {
+        printf("-");
+    } else {
+        if (bb_hasCastleRight(s, BB_CASTLE_WK)) printf("K");
+        if (bb_hasCastleRight(s, BB_CASTLE_WQ)) printf("Q");
+        if (bb_hasCastleRight(s, BB_CASTLE_BK)) printf("k");
+        if (bb_hasCastleRight(s, BB_CASTLE_BQ)) printf("q");
+    }
+    printf(", EP: %s", s->EnPassant >= 0 ? "yes" : "no");
+    printf(", HM: %u, FM: %u\n", s->HalfmoveClock, s->FullmoveNumber);
+}

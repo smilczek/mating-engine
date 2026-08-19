@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 // helper for debugging
 static void printBoardState(BoardState *BS) {
@@ -1083,6 +1084,170 @@ static bool test_bbFenToString_roundtrip() {
     return Success;
 }
 
+// --- bb_printBoard() tests ---
+
+static bool test_bbPrintBoard_startPosition() {
+    bool Success = true;
+
+    BitboardState BS;
+    bb_parseFEN(&BS, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+    // Redirect stdout to temp file to capture output
+    FILE *tmpf = tmpfile();
+    assert(tmpf != NULL);
+    FILE *oldStdout = stdout;
+    dup2(fileno(tmpf), fileno(stdout));
+    fflush(stdout);
+
+    bb_printBoard(&BS);
+
+    fflush(stdout);
+    dup2(fileno(oldStdout), fileno(stdout));
+
+    rewind(tmpf);
+    char buf[4096] = {0};
+    size_t n = fread(buf, 1, sizeof(buf) - 1, tmpf);
+    buf[n] = '\0';
+    fclose(tmpf);
+
+    // Output must contain rank labels '8' through '1'
+    for (int r = 1; r <= 8; r++) {
+        char label[4] = {0};
+        snprintf(label, sizeof(label), "%d ", r);
+        if (!strstr(buf, label)) {
+            fprintf(stderr, "FAIL: missing rank label '%s'\n", label);
+            Success = false;
+        }
+    }
+
+    // Top row (rank 8) must show lowercase black pieces: r n b q k b n r
+    if (!strstr(buf, "r | n | b | q | k | b | n | r")) {
+        fprintf(stderr, "FAIL: top row should have lowercase black pieces\n");
+        Success = false;
+    }
+
+    // Bottom row (rank 1) must show uppercase white pieces: R N B Q K B N R
+    if (!strstr(buf, "R | N | B | Q | K | B | N | R")) {
+        fprintf(stderr, "FAIL: bottom row should have uppercase white pieces\n");
+        Success = false;
+    }
+
+    // Must contain individual piece characters
+    const char *expectedPieces = "rnbqkpRNBQKP";
+    for (int i = 0; expectedPieces[i]; i++) {
+        if (!strchr(buf, expectedPieces[i])) {
+            fprintf(stderr, "FAIL: missing piece char '%c'\n", expectedPieces[i]);
+            Success = false;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPrintBoard_emptyBoard() {
+    bool Success = true;
+
+    BitboardState BS;
+    memset(&BS, 0, sizeof(BS));
+    BS.EnPassant = -1;
+    BS.ActiveColor = WHITE;
+
+    FILE *tmpf = tmpfile();
+    assert(tmpf != NULL);
+    FILE *oldStdout = stdout;
+    dup2(fileno(tmpf), fileno(stdout));
+    fflush(stdout);
+
+    bb_printBoard(&BS);
+
+    fflush(stdout);
+    dup2(fileno(oldStdout), fileno(stdout));
+
+    rewind(tmpf);
+    char buf[4096] = {0};
+    size_t n = fread(buf, 1, sizeof(buf) - 1, tmpf);
+    buf[n] = '\0';
+    fclose(tmpf);
+
+    // Every square on an empty board should be '.'
+    // Count dots: there should be 64 dots (one per square)
+    int dotCount = 0;
+    for (char *p = buf; *p; p++) {
+        if (*p == '.') dotCount++;
+    }
+    if (dotCount < 64) {
+        fprintf(stderr, "FAIL: empty board should have 64 dots, got %d\n", dotCount);
+        Success = false;
+    }
+
+    return Success;
+}
+
+static bool test_bbPrintBoard_enPassantIndicator() {
+    bool Success = true;
+
+    BitboardState BS;
+    bb_parseFEN(&BS, "rnbqkbnr/pppppppp/8/8/Pp6/8/PPPPPPPP/RNBQKBNR b KQkq a3 0 1");
+
+    FILE *tmpf = tmpfile();
+    assert(tmpf != NULL);
+    FILE *oldStdout = stdout;
+    dup2(fileno(tmpf), fileno(stdout));
+    fflush(stdout);
+
+    bb_printBoard(&BS);
+
+    fflush(stdout);
+    dup2(fileno(oldStdout), fileno(stdout));
+
+    rewind(tmpf);
+    char buf[4096] = {0};
+    size_t n = fread(buf, 1, sizeof(buf) - 1, tmpf);
+    buf[n] = '\0';
+    fclose(tmpf);
+
+    // En passant square a3 should be marked with '+'
+    // a3 is file 'a', rank 3. Look for '+' near rank 3 line.
+    if (!strstr(buf, "+")) {
+        fprintf(stderr, "FAIL: en passant square should be indicated with '+', output:\n%s\n", buf);
+        Success = false;
+    }
+
+    return Success;
+}
+
+static bool test_bbPrintBoard_activeColor() {
+    bool Success = true;
+
+    BitboardState BS;
+    bb_parseFEN(&BS, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+
+    FILE *tmpf = tmpfile();
+    assert(tmpf != NULL);
+    FILE *oldStdout = stdout;
+    dup2(fileno(tmpf), fileno(stdout));
+    fflush(stdout);
+
+    bb_printBoard(&BS);
+
+    fflush(stdout);
+    dup2(fileno(oldStdout), fileno(stdout));
+
+    rewind(tmpf);
+    char buf[4096] = {0};
+    size_t n = fread(buf, 1, sizeof(buf) - 1, tmpf);
+    buf[n] = '\0';
+    fclose(tmpf);
+
+    // Output should indicate it's black's turn somehow (e.g., "b" or "Black")
+    if (!strstr(buf, "b") && !strstr(buf, "Black")) {
+        fprintf(stderr, "FAIL: active color indicator for black not found\n");
+        Success = false;
+    }
+
+    return Success;
+}
+
 int main() {
     bool Success = true;
 
@@ -1126,6 +1291,10 @@ int main() {
     Success &= test_bbFenToString_halfmoveFullmove();
     Success &= test_bbFenToString_midgame();
     Success &= test_bbFenToString_roundtrip();
+    Success &= test_bbPrintBoard_startPosition();
+    Success &= test_bbPrintBoard_emptyBoard();
+    Success &= test_bbPrintBoard_enPassantIndicator();
+    Success &= test_bbPrintBoard_activeColor();
     assert(Success);
 
     return !Success;
