@@ -347,6 +347,12 @@ static Bitboard BB_PawnAttacks[2][64];
 // Precomputed legal pawn push squares per color per square [color][square]
 static Bitboard BB_PawnPushes[2][64];
 
+// Precomputed bishop pseudo-attack bitboards for each square (max coverage on empty board)
+static Bitboard BB_PseudoAttacks_Bishop[64];
+
+// Precomputed rook pseudo-attack bitboards for each square (max coverage on empty board)
+static Bitboard BB_PseudoAttacks_Rook[64];
+
 // King move offsets: all 8 adjacent squares (file_delta, rank_delta)
 static const int KingOffsets[8][2] = {
     {-1, -1}, {0, -1}, {1, -1},
@@ -454,6 +460,46 @@ void bb_initPseudoAttacks(void) {
             bPushes |= ((Bitboard)1 << ((rank - 2) * 8 + file));
         }
         BB_PawnPushes[BLACK][sq] = bPushes;
+    }
+
+    // Initialize bishop pseudo-attack tables (max coverage on empty board)
+    // Bishop directions: (+1,+1), (-1,-1), (+1,-1), (-1,+1) in (fileDelta, rankDelta)
+    static const int BishopDirs[4][2] = {{1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+        Bitboard attacks = 0ULL;
+
+        for (int d = 0; d < 4; ++d) {
+            int f = file + BishopDirs[d][0];
+            int r = rank + BishopDirs[d][1];
+            while (f >= 0 && f < 8 && r >= 0 && r < 8) {
+                attacks |= ((Bitboard)1 << (r * 8 + f));
+                f += BishopDirs[d][0];
+                r += BishopDirs[d][1];
+            }
+        }
+        BB_PseudoAttacks_Bishop[sq] = attacks;
+    }
+
+    // Initialize rook pseudo-attack tables (max coverage on empty board)
+    // Rook directions: (0,+1), (0,-1), (+1,0), (-1,0) in (fileDelta, rankDelta)
+    static const int RookDirs[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+        Bitboard attacks = 0ULL;
+
+        for (int d = 0; d < 4; ++d) {
+            int f = file + RookDirs[d][0];
+            int r = rank + RookDirs[d][1];
+            while (f >= 0 && f < 8 && r >= 0 && r < 8) {
+                attacks |= ((Bitboard)1 << (r * 8 + f));
+                f += RookDirs[d][0];
+                r += RookDirs[d][1];
+            }
+        }
+        BB_PseudoAttacks_Rook[sq] = attacks;
     }
 }
 
