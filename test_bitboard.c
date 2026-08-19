@@ -2376,6 +2376,175 @@ static bool test_bbSlidingBishop_firstOccupiedBlocks() {
     return Success;
 }
 
+// --- bb_slidingAttack_rook() tests ---
+
+static bool test_bbSlidingRook_emptyBoard() {
+    bool Success = true;
+
+    // Rook at d4 (sq=27) on empty board: should equal max coverage (14 squares)
+    Bitboard attacks = bb_slidingAttack_rook(27, 0ULL);
+    Success &= attacks == BB_PseudoAttacks_Rook[27];
+    Success &= bb_popcount(attacks) == 14;
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_blockedNorth() {
+    bool Success = true;
+
+    // Rook at d4 (sq=27), blocker on d5 (sq=35)
+    // North: d5 included, d6-d8 excluded
+    Bitboard occupied = bb_Square(35);
+    Bitboard attacks = bb_slidingAttack_rook(27, occupied);
+
+    // d5 must be in the attack set (can capture)
+    Success &= (attacks & bb_Square(35)) != 0ULL;
+
+    // d6-d8 must NOT be in the attack set
+    Success &= (attacks & bb_Square(43)) == 0ULL;  // d6
+    Success &= (attacks & bb_Square(51)) == 0ULL;  // d7
+    Success &= (attacks & bb_Square(59)) == 0ULL;  // d8
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_blockedEast() {
+    bool Success = true;
+
+    // Rook at d4 (sq=27), blocker on e4 (sq=28)
+    // East: e4 included, f4-h4 excluded
+    Bitboard occupied = bb_Square(28);
+    Bitboard attacks = bb_slidingAttack_rook(27, occupied);
+
+    // e4 must be in the attack set
+    Success &= (attacks & bb_Square(28)) != 0ULL;
+
+    // f4-h4 must NOT be in the attack set
+    Success &= (attacks & bb_Square(36)) == 0ULL;  // f4
+    Success &= (attacks & bb_Square(37)) == 0ULL;  // g4
+    Success &= (attacks & bb_Square(38)) == 0ULL;  // h4
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_cornerEmpty() {
+    bool Success = true;
+
+    // Rook at a1 (sq=0) on empty board: 14 squares (7 up + 7 right)
+    Bitboard attacks = bb_slidingAttack_rook(0, 0ULL);
+    Success &= bb_popcount(attacks) == 14;
+    Success &= attacks == BB_PseudoAttacks_Rook[0];
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_multipleBlockers() {
+    bool Success = true;
+
+    // Rook at d4 (sq=27), blockers on d5(35) and e4(28)
+    Bitboard occupied = bb_Square(35) | bb_Square(28);
+    Bitboard attacks = bb_slidingAttack_rook(27, occupied);
+
+    // Both blockers included (capturable)
+    Success &= (attacks & bb_Square(35)) != 0ULL;
+    Success &= (attacks & bb_Square(28)) != 0ULL;
+
+    // Beyond d5: d6,d7,d8 blocked
+    Success &= (attacks & bb_Square(43)) == 0ULL;
+    Success &= (attacks & bb_Square(51)) == 0ULL;
+    Success &= (attacks & bb_Square(59)) == 0ULL;
+
+    // Beyond e4: f4,g4,h4 blocked
+    Success &= (attacks & bb_Square(36)) == 0ULL;
+    Success &= (attacks & bb_Square(37)) == 0ULL;
+    Success &= (attacks & bb_Square(38)) == 0ULL;
+
+    // South direction unaffected: d1-d3 still reachable
+    Success &= (attacks & bb_Square(20)) != 0ULL;  // d3
+    Success &= (attacks & bb_Square(12)) != 0ULL;  // d2
+    Success &= (attacks & bb_Square(4))  != 0ULL;  // d1
+
+    // West direction unaffected: c4,a4 still reachable
+    Success &= (attacks & bb_Square(34)) != 0ULL;  // c4
+    Success &= (attacks & bb_Square(33)) != 0ULL;  // b4
+    Success &= (attacks & bb_Square(32)) != 0ULL;  // a4
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_h8Empty() {
+    bool Success = true;
+
+    // Rook at h8 (sq=63) on empty board: 14 squares (7 left + 7 down)
+    Bitboard attacks = bb_slidingAttack_rook(63, 0ULL);
+    Success &= bb_popcount(attacks) == 14;
+    Success &= attacks == BB_PseudoAttacks_Rook[63];
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_allSquares_emptyMatchesMax() {
+    bool Success = true;
+
+    // For every square, rook attacks on empty board must equal max coverage table
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = bb_slidingAttack_rook(sq, 0ULL);
+        Success &= attacks == BB_PseudoAttacks_Rook[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_noSelf() {
+    bool Success = true;
+
+    // The rook's own square must never appear in the attack bitboard
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard occupied = bb_Square(sq);
+        Bitboard attacks = bb_slidingAttack_rook(sq, occupied);
+        Success &= (attacks & bb_Square(sq)) == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingRook_firstOccupiedBlocks() {
+    bool Success = true;
+
+    // For every square and every possible single-blocker position,
+    // verify that the attack set is a subset of max coverage and doesn't
+    // extend past the blocker.
+    for (int sq = 0; sq < 64; ++sq) {
+        for (int blocker = 0; blocker < 64; ++blocker) {
+            if (blocker == sq) continue;
+            Bitboard occupied = bb_Square(blocker);
+            Bitboard attacks = bb_slidingAttack_rook(sq, occupied);
+
+            // Must be subset of max coverage
+            Success &= (attacks & ~BB_PseudoAttacks_Rook[sq]) == 0ULL;
+
+            // If blocker is in attacks, no squares beyond it on that ray from sq
+            if (attacks & bb_Square(blocker)) {
+                int f1 = sq % 8, r1 = sq / 8;
+                int f2 = blocker % 8, r2 = blocker / 8;
+                int df = f2 - f1, dr = r2 - r1;
+
+                // Continue one step past the blocker
+                int bf = f2 + df, br = r2 + dr;
+                if (bf >= 0 && bf < 8 && br >= 0 && br < 8) {
+                    int nextSq = br * 8 + bf;
+                    // Only valid if this step stays on same rank/file
+                    if ((df == 0 || (f1 == f2)) || (r1 == r2)) {
+                        Success &= (attacks & bb_Square(nextSq)) == 0ULL;
+                    }
+                }
+            }
+        }
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -2491,6 +2660,15 @@ int main() {
     Success &= test_bbSlidingBishop_allSquares_emptyMatchesMax();
     Success &= test_bbSlidingBishop_noSelf();
     Success &= test_bbSlidingBishop_firstOccupiedBlocks();
+    Success &= test_bbSlidingRook_emptyBoard();
+    Success &= test_bbSlidingRook_blockedNorth();
+    Success &= test_bbSlidingRook_blockedEast();
+    Success &= test_bbSlidingRook_cornerEmpty();
+    Success &= test_bbSlidingRook_multipleBlockers();
+    Success &= test_bbSlidingRook_h8Empty();
+    Success &= test_bbSlidingRook_allSquares_emptyMatchesMax();
+    Success &= test_bbSlidingRook_noSelf();
+    Success &= test_bbSlidingRook_firstOccupiedBlocks();
     assert(Success);
 
     return !Success;

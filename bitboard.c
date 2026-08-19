@@ -526,6 +526,29 @@ Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     return attacks;
 }
 
+Bitboard bb_slidingAttack_rook(int sq, Bitboard occupied) {
+    int file = sq % 8;
+    int rank = sq / 8;
+    Bitboard attacks = 0ULL;
+
+    // 4 orthogonal directions: N(0,+1), S(0,-1), E(+1,0), W(-1,0)
+    const int dirs[4][2] = {{0,1},{0,-1},{1,0},{-1,0}};
+
+    for (int d = 0; d < 4; d++) {
+        int f = file + dirs[d][0];
+        int r = rank + dirs[d][1];
+
+        while (f >= 0 && f < 8 && r >= 0 && r < 8) {
+            int target = r * 8 + f;
+            attacks |= ((Bitboard)1 << target);
+            if (occupied & ((Bitboard)1 << target)) break;
+            f += dirs[d][0];
+            r += dirs[d][1];
+        }
+    }
+    return attacks;
+}
+
 void bb_printBoard(BitboardState *s) {
     const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
 
