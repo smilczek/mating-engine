@@ -40,7 +40,7 @@
 [x] 13. Add `bb_printBoard()` — ASCII debug visualization of bitboard state
 
 ## Attack Generation (precomputed tables)
-[ ] 14. Create `BB_PseudoAttacks_Knight[64]` — precomputed knight attack bitboards per square
+[x] 14. Create `BB_PseudoAttacks_Knight[64]` — precomputed knight attack bitboards per square
 [ ] 15. Create `BB_PseudoAttacks_King[64]` — precomputed king attack bitboards per square
 [ ] 16. Create `BB_PawnAttacks[2][64]` — pawn attack masks per color per square
 [ ] 17. Create `BB_PawnPushes[2][64]` — legal single/double push squares per color per square
