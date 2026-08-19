@@ -47,7 +47,7 @@
 [x] 18. Create `BB_PseudoAttacks_Bishop[64]` / `BB_PseudoAttacks_Rook[64]` — max attack coverage on empty board
 
 ## Sliding Piece Attacks (magic bitboards)
-[ ] 19. Implement `bb_slidingAttack_bishop(sq, occupied)` — naive iterative version first
+[x] 19. Implement `bb_slidingAttack_bishop(sq, occupied)` — naive iterative version first
 [ ] 20. Implement `bb_slidingAttack_rook(sq, occupied)` — naive iterative version first
 [ ] 21. Implement `bb_slidingAttack_queen(sq, occupied)` — combine bishop + rook
 [ ] 22. Implement magic bitboard tables for bishop attacks (`BB_MagicBishop[64]`)
