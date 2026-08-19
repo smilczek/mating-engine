@@ -44,7 +44,7 @@
 [x] 15. Create `BB_PseudoAttacks_King[64]` — precomputed king attack bitboards per square
 [x] 16. Create `BB_PawnAttacks[2][64]` — pawn attack masks per color per square
 [x] 17. Create `BB_PawnPushes[2][64]` — legal single/double push squares per color per square
-[ ] 18. Create `BB_PseudoAttacks_Bishop[64]` / `BB_PseudoAttacks_Rook[64]` — max attack coverage on empty board
+[x] 18. Create `BB_PseudoAttacks_Bishop[64]` / `BB_PseudoAttacks_Rook[64]` — max attack coverage on empty board
 
 ## Sliding Piece Attacks (magic bitboards)
 [ ] 19. Implement `bb_slidingAttack_bishop(sq, occupied)` — naive iterative version first
