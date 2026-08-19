@@ -326,6 +326,38 @@ char *bb_fenToString(BitboardState *s, char *buf, int bufSize) {
     return buf;
 }
 
+// Precomputed knight attack bitboards for each square (64 entries)
+static Bitboard BB_PseudoAttacks_Knight[64];
+
+// Knight move offsets: (file_delta, rank_delta) pairs
+// ±1,±2 and ±2,±1 in flat 8-wide board indexing
+static const int KnightOffsets[8][2] = {
+    {-1, -2}, {1, -2},
+    {-2, -1}, {-2, 1},
+    {2, -1},  {2, 1},
+    {-1, 2},  {1, 2}
+};
+
+void bb_initPseudoAttacks(void) {
+    for (int sq = 0; sq < 64; ++sq) {
+        int file = sq % 8;
+        int rank = sq / 8;
+        Bitboard attacks = 0ULL;
+
+        for (int i = 0; i < 8; ++i) {
+            int nf = file + KnightOffsets[i][0];
+            int nr = rank + KnightOffsets[i][1];
+
+            if (nf >= 0 && nf < 8 && nr >= 0 && nr < 8) {
+                int targetSq = nr * 8 + nf;
+                attacks |= ((Bitboard)1 << targetSq);
+            }
+        }
+
+        BB_PseudoAttacks_Knight[sq] = attacks;
+    }
+}
+
 void bb_printBoard(BitboardState *s) {
     const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
 

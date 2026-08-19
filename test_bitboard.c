@@ -1248,9 +1248,116 @@ static bool test_bbPrintBoard_activeColor() {
     return Success;
 }
 
+static bool test_bbPseudoAttacksKnight_corners() {
+    bool Success = true;
+
+    // a1 (sq 0): knight attacks c2(10) and b3(17) — exactly 2 attacks
+    Bitboard a1_attacks = BB_PseudoAttacks_Knight[0];
+    Success &= bb_popcount(a1_attacks) == 2;
+    Success &= (a1_attacks & bb_Square(10)) != 0ULL;  // c2
+    Success &= (a1_attacks & bb_Square(17)) != 0ULL;  // b3
+
+    // h8 (sq 63): knight attacks f7(53) and g6(46) — exactly 2 attacks
+    Bitboard h8_attacks = BB_PseudoAttacks_Knight[63];
+    Success &= bb_popcount(h8_attacks) == 2;
+    Success &= (h8_attacks & bb_Square(53)) != 0ULL;  // f7
+    Success &= (h8_attacks & bb_Square(46)) != 0ULL;  // g6
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKnight_center() {
+    bool Success = true;
+
+    // d4 (sq 27): center square should have 8 attacks
+    Bitboard d4_attacks = BB_PseudoAttacks_Knight[27];
+    Success &= bb_popcount(d4_attacks) == 8;
+
+    // Verify each of the 8 target squares
+    Success &= (d4_attacks & bb_Square(17)) != 0ULL;  // b3
+    Success &= (d4_attacks & bb_Square(33)) != 0ULL;  // b5
+    Success &= (d4_attacks & bb_Square(10)) != 0ULL;  // c2
+    Success &= (d4_attacks & bb_Square(42)) != 0ULL;  // c6
+    Success &= (d4_attacks & bb_Square(12)) != 0ULL;  // e2
+    Success &= (d4_attacks & bb_Square(44)) != 0ULL;  // e6
+    Success &= (d4_attacks & bb_Square(21)) != 0ULL;  // f3
+    Success &= (d4_attacks & bb_Square(37)) != 0ULL;  // f5
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKnight_onBoard() {
+    bool Success = true;
+
+    // For every square, all set bits in the attack mask must be < 64 (on-board)
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = BB_PseudoAttacks_Knight[sq];
+        Bitboard tmp = attacks;
+        while (tmp) {
+            int t = bb_lsb(tmp);
+            Success &= t >= 0 && t < 64;
+            bb_pop_lsb(&tmp);
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKnight_symmetry() {
+    bool Success = true;
+
+    // For every pair of squares (sq, t): if t is attacked by sq, then sq must be attacked by t
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = BB_PseudoAttacks_Knight[sq];
+        Bitboard tmp = attacks;
+        while (tmp) {
+            int t = bb_pop_lsb(&tmp);
+            // Symmetry: BB_PseudoAttacks_Knight[t] must have bit sq set
+            Success &= (BB_PseudoAttacks_Knight[t] & bb_Square(sq)) != 0ULL;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbPseudoAttacksKnight_expectedPopcounts() {
+    bool Success = true;
+
+    // Expected popcounts per square type:
+    // Corner: 2 attacks (a1,h1,a8,h8)
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[0]) == 2;   // a1
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[7]) == 2;   // h1
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[56]) == 2;   // a8
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[63]) == 2;   // h8
+
+    // Near-corner edge: 3 or 4 attacks
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[1]) == 3;   // b1
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[6]) == 3;   // g1
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[57]) == 3;   // b8
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[62]) == 3;   // g8
+
+    // Center: 8 attacks (d4,e4,d5,e5)
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[27]) == 8;   // d4
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[35]) == 8;   // e4
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[34]) == 8;   // d5
+    Success &= bb_popcount(BB_PseudoAttacks_Knight[42]) == 8;   // e5
+
+    return Success;
+}
+
+
+extern void bb_initPseudoAttacks(void);
+
 int main() {
     bool Success = true;
 
+    bb_initPseudoAttacks();
+
+    Success &= test_bbPseudoAttacksKnight_corners();
+    Success &= test_bbPseudoAttacksKnight_center();
+    Success &= test_bbPseudoAttacksKnight_onBoard();
+    Success &= test_bbPseudoAttacksKnight_symmetry();
+    Success &= test_bbPseudoAttacksKnight_expectedPopcounts();
     Success &= test_shift();
     Success &= test_bbSquare();
     Success &= test_bbPopcount();
