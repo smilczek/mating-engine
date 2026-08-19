@@ -2186,6 +2186,196 @@ static bool test_bbPseudoAttacksRook_expectedPopcounts() {
     return Success;
 }
 
+// --- bb_slidingAttack_bishop() tests ---
+
+static bool test_bbSlidingBishop_emptyBoard() {
+    bool Success = true;
+
+    // Bishop at d4 (sq=27) on empty board: should equal max coverage
+    Bitboard attacks = bb_slidingAttack_bishop(27, 0ULL);
+    Success &= attacks == BB_PseudoAttacks_Bishop[27];
+    Success &= bb_popcount(attacks) == 13;
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_blockedForward() {
+    bool Success = true;
+
+    // Bishop at d4 (sq=27), blocker on e5 (sq=35)
+    // NE diag: e5(35) is included but f6(42) is NOT
+    Bitboard occupied = bb_Square(35);
+    Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
+
+    // e5 must be in the attack set (can capture)
+    Success &= (attacks & bb_Square(35)) != 0ULL;
+
+    // f6 must NOT be in the attack set (blocked by e5)
+    Success &= (attacks & bb_Square(42)) == 0ULL;
+    // g7 must NOT be in the attack set
+    Success &= (attacks & bb_Square(49)) == 0ULL;
+    // h8 must NOT be in the attack set
+    Success &= (attacks & bb_Square(56)) == 0ULL;
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_blockedSW() {
+    bool Success = true;
+
+    // Bishop at d4 (sq=27), blocker on c3 (sq=19)
+    // SW diag: c3(19) included, b2(10) and a1(0) excluded
+    Bitboard occupied = bb_Square(19);
+    Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
+
+    // c3 must be in the attack set
+    Success &= (attacks & bb_Square(19)) != 0ULL;
+
+    // b2 must NOT be in the attack set
+    Success &= (attacks & bb_Square(10)) == 0ULL;
+    // a1 must NOT be in the attack set
+    Success &= (attacks & bb_Square(0)) == 0ULL;
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_cornerEmpty() {
+    bool Success = true;
+
+    // Bishop at a1 (sq=0) on empty board: covers a1-h8 diagonal (7 squares)
+    Bitboard attacks = bb_slidingAttack_bishop(0, 0ULL);
+    Success &= bb_popcount(attacks) == 7;
+    Success &= attacks == BB_PseudoAttacks_Bishop[0];
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_cornerBlocked() {
+    bool Success = true;
+
+    // Bishop at a1 (sq=0), blocker on d4 (sq=27)
+    // Only a1-b2-c3-d4 covered (4 squares), nothing beyond d4
+    Bitboard occupied = bb_Square(27);
+    Bitboard attacks = bb_slidingAttack_bishop(0, occupied);
+
+    Success &= bb_popcount(attacks) == 4;
+    Success &= (attacks & bb_Square(10)) != 0ULL;  // b2
+    Success &= (attacks & bb_Square(19)) != 0ULL;  // c3
+    Success &= (attacks & bb_Square(27)) != 0ULL;  // d4 (the blocker, capturable)
+    Success &= (attacks & bb_Square(35)) == 0ULL;  // e5 blocked
+    Success &= (attacks & bb_Square(42)) == 0ULL;  // f6 blocked
+    Success &= (attacks & bb_Square(49)) == 0ULL;  // g7 blocked
+    Success &= (attacks & bb_Square(56)) == 0ULL;  // h8 blocked
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_h1Empty() {
+    bool Success = true;
+
+    // Bishop at h1 (sq=7) on empty board: 7 squares on h1-a8 diagonal
+    Bitboard attacks = bb_slidingAttack_bishop(7, 0ULL);
+    Success &= bb_popcount(attacks) == 7;
+    Success &= attacks == BB_PseudoAttacks_Bishop[7];
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_multipleBlockers() {
+    bool Success = true;
+
+    // Bishop at d4 (sq=27), blockers on e5(35) and c3(19)
+    Bitboard occupied = bb_Square(35) | bb_Square(19);
+    Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
+
+    // Both blockers included (capturable)
+    Success &= (attacks & bb_Square(35)) != 0ULL;
+    Success &= (attacks & bb_Square(19)) != 0ULL;
+
+    // Beyond e5: f6,g7,h8 all blocked
+    Success &= (attacks & bb_Square(42)) == 0ULL;
+    Success &= (attacks & bb_Square(49)) == 0ULL;
+    Success &= (attacks & bb_Square(56)) == 0ULL;
+
+    // Beyond c3: b2,a1 all blocked
+    Success &= (attacks & bb_Square(10)) == 0ULL;
+    Success &= (attacks & bb_Square(0)) == 0ULL;
+
+    // Other diags unaffected: anti-diag still has g1,f2,e3,c5,b6,a7
+    Success &= (attacks & bb_Square(7)) != 0ULL;   // g1
+    Success &= (attacks & bb_Square(14)) != 0ULL;  // f2
+    Success &= (attacks & bb_Square(21)) != 0ULL;  // e3
+    Success &= (attacks & bb_Square(33)) != 0ULL;  // c5
+    Success &= (attacks & bb_Square(40)) != 0ULL;  // b6
+    Success &= (attacks & bb_Square(48)) != 0ULL;  // a7
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_allSquares_emptyMatchesMax() {
+    bool Success = true;
+
+    // For every square, bishop attacks on empty board must equal max coverage table
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard attacks = bb_slidingAttack_bishop(sq, 0ULL);
+        Success &= attacks == BB_PseudoAttacks_Bishop[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_noSelf() {
+    bool Success = true;
+
+    // The bishop's own square must never appear in the attack bitboard
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard occupied = bb_Square(sq);  // occupy only own square
+        Bitboard attacks = bb_slidingAttack_bishop(sq, occupied);
+        Success &= (attacks & bb_Square(sq)) == 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbSlidingBishop_firstOccupiedBlocks() {
+    bool Success = true;
+
+    // For every square and every possible single-blocker position,
+    // verify that the attack set is a subset of max coverage and doesn't
+    // extend past the blocker.
+    for (int sq = 0; sq < 64; ++sq) {
+        for (int blocker = 0; blocker < 64; ++blocker) {
+            if (blocker == sq) continue;
+            Bitboard occupied = bb_Square(blocker);
+            Bitboard attacks = bb_slidingAttack_bishop(sq, occupied);
+
+            // Must be subset of max coverage
+            Success &= (attacks & ~BB_PseudoAttacks_Bishop[sq]) == 0ULL;
+
+            // If blocker is in attacks, no squares beyond it on that diagonal
+            if (attacks & bb_Square(blocker)) {
+                // Blocker was reached — verify it's the last square on its ray from sq
+                int f1 = sq % 8, r1 = sq / 8;
+                int f2 = blocker % 8, r2 = blocker / 8;
+                int df = f2 - f1, dr = r2 - r1;
+
+                // Continue one step past the blocker
+                int bf = f2 + df, br = r2 + dr;
+                if (bf >= 0 && bf < 8 && br >= 0 && br < 8) {
+                    int nextSq = br * 8 + bf;
+                    // Only valid if this step stays on same diagonal
+                    if ((df == 0 || (f1 == f2)) || (r1 == r2) ||
+                        (df == dr) || (df == -dr)) {
+                        Success &= (attacks & bb_Square(nextSq)) == 0ULL;
+                    }
+                }
+            }
+        }
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 
 int main() {
@@ -2291,6 +2481,16 @@ int main() {
     Success &= test_bbPseudoAttacksRook_noSelf();
     Success &= test_bbPseudoAttacksBishop_expectedPopcounts();
     Success &= test_bbPseudoAttacksRook_expectedPopcounts();
+    Success &= test_bbSlidingBishop_emptyBoard();
+    Success &= test_bbSlidingBishop_blockedForward();
+    Success &= test_bbSlidingBishop_blockedSW();
+    Success &= test_bbSlidingBishop_cornerEmpty();
+    Success &= test_bbSlidingBishop_cornerBlocked();
+    Success &= test_bbSlidingBishop_h1Empty();
+    Success &= test_bbSlidingBishop_multipleBlockers();
+    Success &= test_bbSlidingBishop_allSquares_emptyMatchesMax();
+    Success &= test_bbSlidingBishop_noSelf();
+    Success &= test_bbSlidingBishop_firstOccupiedBlocks();
     assert(Success);
 
     return !Success;

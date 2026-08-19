@@ -503,6 +503,29 @@ void bb_initPseudoAttacks(void) {
     }
 }
 
+Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
+    int file = sq % 8;
+    int rank = sq / 8;
+    Bitboard attacks = 0ULL;
+
+    // 4 diagonal directions: NE(+1,+1), NW(-1,+1), SE(+1,-1), SW(-1,-1)
+    const int dirs[4][2] = {{1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
+
+    for (int d = 0; d < 4; d++) {
+        int f = file + dirs[d][0];
+        int r = rank + dirs[d][1];
+
+        while (f >= 0 && f < 8 && r >= 0 && r < 8) {
+            int target = r * 8 + f;
+            attacks |= ((Bitboard)1 << target);
+            if (occupied & ((Bitboard)1 << target)) break;
+            f += dirs[d][0];
+            r += dirs[d][1];
+        }
+    }
+    return attacks;
+}
+
 void bb_printBoard(BitboardState *s) {
     const char PieceChars[6] = {'P', 'N', 'B', 'R', 'Q', 'K'};
 
