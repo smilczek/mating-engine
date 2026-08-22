@@ -3,9 +3,5 @@
 cd $(dirname "$0")
 mkdir -p build
 
-gcc -O3 -DNDEBUG uci.c -o build/uci-mating-engine
-gcc -O3 -DNDEBUG main.c -o build/mating-engine
-gcc -O2 -g -fno-omit-frame-pointer main.c -o build/chess
-gcc -O0 -g test.c -o build/test
 gcc -O0 -g test_bitboard.c -o build/test_bitboard
 gcc -O3 -g test_engine.c -o build/test_engine
