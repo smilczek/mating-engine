@@ -3520,6 +3520,94 @@ static bool test_bbGenRook_matchesOracle() {
     return Success;
 }
 
+// --- Queen move generation (combined sliding, captures separated) ---
+
+// Independent oracle using the NAIVE sliding attacks (bishop | rook) instead of
+// the magic-table bb_queenAttacks.
+static Bitboard t_expectedQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB) {
+    Bitboard friendlyBB = allOccBB & ~enemyBB;
+    Bitboard froms = queenBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        Bitboard attacks = bb_slidingAttack_bishop(from, allOccBB) | bb_slidingAttack_rook(from, allOccBB);
+        result |= (attacks & ~friendlyBB);
+    }
+    return result;
+}
+
+static bool test_bbGenQueen_center() {
+    // A lone queen on d4 reaches all 27 squares (13 diagonal + 14 rank/file).
+    Bitboard result = bb_genQueenMoves(bb_Square(27), 0, 0);
+    bool Success = result == bb_queenAttacks(27, 0);
+    Success &= bb_popcount(result) == 27;
+    return Success;
+}
+
+static bool test_bbGenQueen_edge() {
+    // A lone queen on a1 reaches 21 squares (7 main diagonal + 14 rank/file).
+    Bitboard result = bb_genQueenMoves(bb_Square(0), 0, 0);
+    bool Success = result == bb_queenAttacks(0, 0);
+    Success &= bb_popcount(result) == 21;
+    return Success;
+}
+
+static bool test_bbGenQueen_capture() {
+    // An enemy on the first NE diagonal square (e5) is a capture; f6 beyond it is blocked.
+    Bitboard allOccBB = bb_Square(36);   // enemy on e5
+    Bitboard enemyBB = bb_Square(36);
+    Bitboard result = bb_genQueenMoves(bb_Square(27), allOccBB, enemyBB);
+    bool Success = (result & enemyBB) == enemyBB;        // e5 is a capture
+    Success &= (result & bb_Square(45)) == 0;            // f6 behind the capture is blocked
+    return Success;
+}
+
+static bool test_bbGenQueen_blocksFriendly() {
+    // A friendly on the first north square (d5) is not a destination (nor d6 beyond).
+    Bitboard allOccBB = bb_Square(35);   // friendly on d5
+    Bitboard result = bb_genQueenMoves(bb_Square(27), allOccBB, 0);
+    bool Success = (result & bb_Square(35)) == 0;        // friendly d5 not a move
+    Success &= (result & bb_Square(43)) == 0;           // d6 behind the friendly is blocked
+    return Success;
+}
+
+static bool test_bbGenQueen_capturesSeparated() {
+    // Enemy on the NE diagonal (e5), friendly on the north file (d5): separated,
+    // each ray stopped at its first blocker.
+    Bitboard allOccBB = bb_Square(36) | bb_Square(35); // enemy e5, friendly d5
+    Bitboard enemyBB = bb_Square(36);
+    Bitboard result = bb_genQueenMoves(bb_Square(27), allOccBB, enemyBB);
+    Bitboard quiet = result & ~enemyBB;
+    Bitboard captures = result & enemyBB;
+    bool Success = captures == enemyBB;                 // exactly one capture (e5)
+    Success &= (result & bb_Square(35)) == 0;           // friendly d5 excluded
+    Success &= (result & bb_Square(45)) == 0;          // f6 beyond enemy e5
+    Success &= (result & bb_Square(43)) == 0;          // d6 beyond friendly d5
+    Success &= (quiet | captures) == result;            // quiet+captures == full result
+    Success &= (quiet & captures) == 0;                 // disjoint
+    return Success;
+}
+
+static bool test_bbGenQueen_matchesOracle() {
+    // Every single-queen position must match the naive (bishop|rook) oracle.
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard queenBB = bb_Square(sq);
+        Success &= bb_genQueenMoves(queenBB, 0, 0) == t_expectedQueenMoves(queenBB, 0, 0);
+    }
+    // Plus occupied / capture / friendly cases.
+    Bitboard casesQ[4], casesO[4], casesE[4];
+    casesQ[0] = casesQ[1] = casesQ[2] = casesQ[3] = bb_Square(27);
+    casesO[0] = 0;
+    casesO[1] = bb_Square(36);                 casesE[1] = bb_Square(36);   // enemy on e5 (diagonal)
+    casesO[2] = bb_Square(35);                 casesE[2] = 0;                // friendly on d5 (file)
+    casesO[3] = bb_Square(36) | bb_Square(35); casesE[3] = bb_Square(36);   // mixed
+    for (int i = 0; i < 4; ++i) {
+        Success &= bb_genQueenMoves(casesQ[i], casesO[i], casesE[i]) == t_expectedQueenMoves(casesQ[i], casesO[i], casesE[i]);
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3527,10 +3615,12 @@ extern void bb_initBetween(void);
 extern void bb_initRayPass(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
+extern Bitboard bb_queenAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB);
 extern Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB);
 extern Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard enemyBB);
+extern Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB);
 
 int main() {
     bool Success = true;
@@ -3725,6 +3815,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenRook_blocksFriendly();
     Success &= test_bbGenRook_capturesSeparated();
     Success &= test_bbGenRook_matchesOracle();
+    Success &= test_bbGenQueen_center();
+    Success &= test_bbGenQueen_edge();
+    Success &= test_bbGenQueen_capture();
+    Success &= test_bbGenQueen_blocksFriendly();
+    Success &= test_bbGenQueen_capturesSeparated();
+    Success &= test_bbGenQueen_matchesOracle();
     assert(Success);
 
     return !Success;

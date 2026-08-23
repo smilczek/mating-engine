@@ -707,6 +707,28 @@ Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard enemyBB) {
     return result;
 }
 
+// bb_genQueenMoves is the combined sliding generator: for each queen in
+// queenBB, bb_queenAttacks (bishop | rook) gives the empty squares it slides
+// through plus the first occupied square in each of its eight rays; friendly
+// squares are excluded. Captures are `result & enemyBB`, quiet moves
+// `result & ~enemyBB`.
+//
+//   queenBB  : bitboard of the queens (the "from" squares).
+//   allOccBB : all occupied squares (both colors) — stops the slide.
+//   enemyBB  : enemy pieces (marks which result squares are captures).
+
+Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB) {
+    // Friendly = occupied squares that are not enemy squares.
+    Bitboard friendlyBB = allOccBB & ~enemyBB;
+    Bitboard froms = queenBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        result |= (bb_queenAttacks(from, allOccBB) & ~friendlyBB);
+    }
+    return result;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;
@@ -991,6 +1013,14 @@ Bitboard bb_rookAttacks(int sq, Bitboard occupied) {
 
     unsigned int index = (unsigned int)((relOcc * BB_MagicRook[sq]) >> (64 - k));
     return BB_RookAttacks[sq][index];
+}
+
+// A queen's attacks are the union of its bishop (diagonal) and rook (rank/file)
+// attacks. Both magic tables already incorporate the same occupancy, so the union
+// is simply their bitwise OR.
+
+Bitboard bb_queenAttacks(int sq, Bitboard occupied) {
+    return bb_bishopAttacks(sq, occupied) | bb_rookAttacks(sq, occupied);
 }
 
 // Single entry point that initialises every magic bitboard lookup table. Mirrors
