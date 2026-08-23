@@ -639,6 +639,21 @@ Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB) {
     return result;
 }
 
+// bb_genKingMoves returns the bitboard of every square the king on kingSq can
+// move to: any adjacent square that is not occupied by a friendly piece.
+// Captures (moves onto enemyBB) and quiet moves (onto empty squares) are both
+// in the result; the capture subset is `result & enemyBB`.
+//
+//   kingSq     : the king's current square (0..63).
+//   friendlyBB : friendly pieces the king may not move onto.
+//   enemyBB    : enemy pieces (marks which result squares are captures).
+
+Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB) {
+    (void) enemyBB;
+    // The king may not step onto a friendly square.
+    return BB_PseudoAttacks_King[kingSq] & ~friendlyBB;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

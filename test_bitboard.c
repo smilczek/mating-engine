@@ -3266,6 +3266,82 @@ static bool test_bbGenKnight_matchesOracle() {
     return Success;
 }
 
+// --- King move generation ---
+
+// Independent oracle for king moves: the 8 adjacent squares (file_delta,
+// rank_delta) that are on-board and not occupied by a friendly piece. Does not
+// consult BB_PseudoAttacks_King so it is a genuine cross-check.
+static const int t_kingDf[8] = { -1, 0, 1, -1, 1, -1, 0, 1 };
+static const int t_kingDr[8] = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+static Bitboard t_expectedKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB) {
+    (void) enemyBB;
+    int kr = kingSq / 8, kf = kingSq % 8;
+    Bitboard result = 0;
+    for (int i = 0; i < 8; ++i) {
+        int nr = kr + t_kingDr[i];
+        int nf = kf + t_kingDf[i];
+        if (nr < 0 || nr >= 8 || nf < 0 || nf >= 8) continue;
+        int to = nr * 8 + nf;
+        if (friendlyBB & bb_Square(to)) continue; // friendly square
+        result |= bb_Square(to);
+    }
+    return result;
+}
+
+static bool test_bbGenKing_center() {
+    // A lone king on d4 reaches all 8 adjacent squares.
+    Bitboard result = bb_genKingMoves(27, 0, 0);
+    bool Success = result == BB_PseudoAttacks_King[27];
+    Success &= bb_popcount(result) == 8;
+    return Success;
+}
+
+static bool test_bbGenKing_corner() {
+    // A lone king on a1 reaches exactly b1, a2 and b2.
+    Bitboard result = bb_genKingMoves(0, 0, 0);
+    bool Success = result == BB_PseudoAttacks_King[0];
+    Success &= bb_popcount(result) == 3;
+    return Success;
+}
+
+static bool test_bbGenKing_edge() {
+    // A lone king on a4 (left edge) reaches 5 squares.
+    Bitboard result = bb_genKingMoves(32, 0, 0);
+    bool Success = result == BB_PseudoAttacks_King[32];
+    Success &= bb_popcount(result) == 5;
+    return Success;
+}
+
+static bool test_bbGenKing_capture() {
+    // An enemy on a square the king attacks is still a legal destination.
+    Bitboard friendlyBB = 0;
+    Bitboard enemyBB = bb_Square(34);    // enemy on d5 (d4 attacks it)
+    Bitboard result = bb_genKingMoves(27, friendlyBB, enemyBB);
+    bool Success = bb_popcount(result) == 8;
+    Success &= (result & enemyBB) == enemyBB;
+    return Success;
+}
+
+static bool test_bbGenKing_blocksFriendly() {
+    // The king on d4 may not step onto a friendly piece on e4.
+    Bitboard result = bb_genKingMoves(27, bb_Square(28), 0);
+    return (result & bb_Square(28)) == 0;
+}
+
+static bool test_bbGenKing_matchesOracle() {
+    // Every single-king position must match the independent offset oracle.
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= bb_genKingMoves(sq, 0, 0) == t_expectedKingMoves(sq, 0, 0);
+    }
+    // Plus a few friendly / enemy positions.
+    Success &= bb_genKingMoves(27, bb_Square(28), 0) == t_expectedKingMoves(27, bb_Square(28), 0);
+    Success &= bb_genKingMoves(27, 0, bb_Square(34)) == t_expectedKingMoves(27, 0, bb_Square(34));
+    Success &= bb_genKingMoves(4, bb_Square(3), bb_Square(5)) == t_expectedKingMoves(4, bb_Square(3), bb_Square(5));
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3274,6 +3350,7 @@ extern void bb_initRayPass(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB);
+extern Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB);
 
 int main() {
     bool Success = true;
@@ -3450,6 +3527,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenKnight_blocksFriendly();
     Success &= test_bbGenKnight_friendlyBlocked();
     Success &= test_bbGenKnight_matchesOracle();
+    Success &= test_bbGenKing_center();
+    Success &= test_bbGenKing_corner();
+    Success &= test_bbGenKing_edge();
+    Success &= test_bbGenKing_capture();
+    Success &= test_bbGenKing_blocksFriendly();
+    Success &= test_bbGenKing_matchesOracle();
     assert(Success);
 
     return !Success;
