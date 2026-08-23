@@ -1370,12 +1370,12 @@ static bool test_bbPseudoAttacksKing_corners() {
     Success &= (a8_attacks & bb_Square(48)) != 0ULL; // a7
     Success &= (a8_attacks & bb_Square(49)) != 0ULL; // b7
 
-    // h8 (sq 63): attacks g8(55), h7(56), g7(57) — exactly 3 attacks
+    // h8 (sq 63): attacks g8(62), h7(55), g7(54) — exactly 3 attacks
     Bitboard h8_attacks = BB_PseudoAttacks_King[63];
     Success &= bb_popcount(h8_attacks) == 3;
-    Success &= (h8_attacks & bb_Square(55)) != 0ULL; // g8
-    Success &= (h8_attacks & bb_Square(56)) != 0ULL; // h7
-    Success &= (h8_attacks & bb_Square(57)) != 0ULL; // g7
+    Success &= (h8_attacks & bb_Square(62)) != 0ULL; // g8
+    Success &= (h8_attacks & bb_Square(55)) != 0ULL; // h7
+    Success &= (h8_attacks & bb_Square(54)) != 0ULL; // g7
 
     return Success;
 }
@@ -1524,11 +1524,11 @@ static bool test_bbPseudoAttacksKing_expectedPopcounts() {
 static bool test_bbPawnAttacks_whiteCenter() {
     bool Success = true;
 
-    // White pawn at e2 (sq=14): attacks f3(22) and d3(20) — exactly 2 bits
-    Bitboard attacks = BB_PawnAttacks[WHITE][14];
+    // White pawn at e2 (sq=12): attacks f3(21) and d3(19) — exactly 2 bits
+    Bitboard attacks = BB_PawnAttacks[WHITE][12];
     Success &= bb_popcount(attacks) == 2;
-    Success &= (attacks & bb_Square(22)) != 0ULL;  // f3
-    Success &= (attacks & bb_Square(20)) != 0ULL;  // d3
+    Success &= (attacks & bb_Square(21)) != 0ULL;  // f3
+    Success &= (attacks & bb_Square(19)) != 0ULL;  // d3
 
     return Success;
 }
@@ -1536,10 +1536,10 @@ static bool test_bbPawnAttacks_whiteCenter() {
 static bool test_bbPawnAttacks_whiteEdgeH() {
     bool Success = true;
 
-    // White pawn at h2 (sq=7): attacks only g3(15) — 1 bit (edge)
-    Bitboard attacks = BB_PawnAttacks[WHITE][7];
+    // White pawn at h2 (sq=15): attacks only g3(22) — 1 bit (edge)
+    Bitboard attacks = BB_PawnAttacks[WHITE][15];
     Success &= bb_popcount(attacks) == 1;
-    Success &= (attacks & bb_Square(15)) != 0ULL;  // g3
+    Success &= (attacks & bb_Square(22)) != 0ULL;  // g3
 
     return Success;
 }
@@ -1547,10 +1547,10 @@ static bool test_bbPawnAttacks_whiteEdgeH() {
 static bool test_bbPawnAttacks_whiteEdgeA() {
     bool Success = true;
 
-    // White pawn at a2 (sq=0): attacks only b3(11) — 1 bit (edge)
-    Bitboard attacks = BB_PawnAttacks[WHITE][0];
+    // White pawn at a2 (sq=8): attacks only b3(17) — 1 bit (edge)
+    Bitboard attacks = BB_PawnAttacks[WHITE][8];
     Success &= bb_popcount(attacks) == 1;
-    Success &= (attacks & bb_Square(11)) != 0ULL;  // b3
+    Success &= (attacks & bb_Square(17)) != 0ULL;  // b3
 
     return Success;
 }
@@ -1558,11 +1558,11 @@ static bool test_bbPawnAttacks_whiteEdgeA() {
 static bool test_bbPawnAttacks_blackCenter() {
     bool Success = true;
 
-    // Black pawn at e7 (sq=50): attacks f6(42) and d6(40) — exactly 2 bits
-    Bitboard attacks = BB_PawnAttacks[BLACK][50];
+    // Black pawn at e7 (sq=52): attacks f6(45) and d6(43) — exactly 2 bits
+    Bitboard attacks = BB_PawnAttacks[BLACK][52];
     Success &= bb_popcount(attacks) == 2;
-    Success &= (attacks & bb_Square(42)) != 0ULL;  // f6
-    Success &= (attacks & bb_Square(40)) != 0ULL;  // d6
+    Success &= (attacks & bb_Square(45)) != 0ULL;  // f6
+    Success &= (attacks & bb_Square(43)) != 0ULL;  // d6
 
     return Success;
 }
@@ -1570,10 +1570,10 @@ static bool test_bbPawnAttacks_blackCenter() {
 static bool test_bbPawnAttacks_blackEdgeH() {
     bool Success = true;
 
-    // Black pawn at h7 (sq=55): attacks only g6(47) — 1 bit
+    // Black pawn at h7 (sq=55): attacks only g6(46) — 1 bit
     Bitboard attacks = BB_PawnAttacks[BLACK][55];
     Success &= bb_popcount(attacks) == 1;
-    Success &= (attacks & bb_Square(47)) != 0ULL;  // g6
+    Success &= (attacks & bb_Square(46)) != 0ULL;  // g6
 
     return Success;
 }
@@ -1581,10 +1581,10 @@ static bool test_bbPawnAttacks_blackEdgeH() {
 static bool test_bbPawnAttacks_blackEdgeA() {
     bool Success = true;
 
-    // Black pawn at a7 (sq=48): attacks only b6(39) — 1 bit
+    // Black pawn at a7 (sq=48): attacks only b6(41) — 1 bit
     Bitboard attacks = BB_PawnAttacks[BLACK][48];
     Success &= bb_popcount(attacks) == 1;
-    Success &= (attacks & bb_Square(39)) != 0ULL;  // b6
+    Success &= (attacks & bb_Square(41)) != 0ULL;  // b6
 
     return Success;
 }
@@ -1635,11 +1635,11 @@ static bool test_bbPawnAttacks_whiteRank1() {
     bool Success = true;
 
     // White pawns on rank 1 (bottom row): attacks go to rank 2
-    // c1 (sq=2): attacks b2(9) and d2(10)
+    // c1 (sq=2): attacks b2(9) and d2(11)
     Bitboard attacks = BB_PawnAttacks[WHITE][2];
     Success &= bb_popcount(attacks) == 2;
     Success &= (attacks & bb_Square(9)) != 0ULL;   // b2
-    Success &= (attacks & bb_Square(10)) != 0ULL;  // d2
+    Success &= (attacks & bb_Square(11)) != 0ULL;  // d2
 
     return Success;
 }
@@ -1909,27 +1909,27 @@ static bool test_bbPseudoAttacksBishop_d4() {
     bool Success = true;
 
     // Bishop at d4 (sq=27): main diag (a1-h8) + anti-diag (h1-a8)
-    // Main diag: c3(19), b2(10), a1(0), e5(35), f6(42), g7(49), h8(56) = 7
-    // Anti-diag: g1(7), f2(14), e3(21), c5(33), b6(40), a7(48) = 6
+    // Main diag: c3(18), b2(9), a1(0), e5(36), f6(45), g7(54), h8(63) = 7
+    // Anti-diag: g1(6), f2(13), e3(20), c5(34), b6(41), a7(48) = 6
     // Total = 13 unique squares
     Bitboard attacks = BB_PseudoAttacks_Bishop[27];
     Success &= bb_popcount(attacks) == 13;
 
     // Verify main diagonal squares
-    Success &= (attacks & bb_Square(19)) != 0ULL;  // c3
-    Success &= (attacks & bb_Square(10)) != 0ULL;  // b2
+    Success &= (attacks & bb_Square(18)) != 0ULL;  // c3
+    Success &= (attacks & bb_Square(9))  != 0ULL;  // b2
     Success &= (attacks & bb_Square(0))  != 0ULL;  // a1
-    Success &= (attacks & bb_Square(35)) != 0ULL;  // e5
-    Success &= (attacks & bb_Square(42)) != 0ULL;  // f6
-    Success &= (attacks & bb_Square(49)) != 0ULL;  // g7
-    Success &= (attacks & bb_Square(56)) != 0ULL;  // h8
+    Success &= (attacks & bb_Square(36)) != 0ULL;  // e5
+    Success &= (attacks & bb_Square(45)) != 0ULL;  // f6
+    Success &= (attacks & bb_Square(54)) != 0ULL;  // g7
+    Success &= (attacks & bb_Square(63)) != 0ULL;  // h8
 
     // Verify anti-diagonal squares
-    Success &= (attacks & bb_Square(7))  != 0ULL;  // g1
-    Success &= (attacks & bb_Square(14)) != 0ULL;  // f2
-    Success &= (attacks & bb_Square(21)) != 0ULL;  // e3
-    Success &= (attacks & bb_Square(33)) != 0ULL;  // c5
-    Success &= (attacks & bb_Square(40)) != 0ULL;  // b6
+    Success &= (attacks & bb_Square(6))  != 0ULL;  // g1
+    Success &= (attacks & bb_Square(13)) != 0ULL;  // f2
+    Success &= (attacks & bb_Square(20)) != 0ULL;  // e3
+    Success &= (attacks & bb_Square(34)) != 0ULL;  // c5
+    Success &= (attacks & bb_Square(41)) != 0ULL;  // b6
     Success &= (attacks & bb_Square(48)) != 0ULL;  // a7
 
     // d4 itself must NOT be in the attack mask
@@ -1942,16 +1942,16 @@ static bool test_bbPseudoAttacksBishop_a1() {
     bool Success = true;
 
     // Bishop at a1 (sq=0): only main diagonal a1-h8
-    // b2(10), c3(19), d4(27), e5(35), f6(42), g7(49), h8(56) = 7 squares
+    // b2(9), c3(18), d4(27), e5(36), f6(45), g7(54), h8(63) = 7 squares
     Bitboard attacks = BB_PseudoAttacks_Bishop[0];
     Success &= bb_popcount(attacks) == 7;
-    Success &= (attacks & bb_Square(10)) != 0ULL;  // b2
-    Success &= (attacks & bb_Square(19)) != 0ULL;  // c3
+    Success &= (attacks & bb_Square(9))  != 0ULL;  // b2
+    Success &= (attacks & bb_Square(18)) != 0ULL;  // c3
     Success &= (attacks & bb_Square(27)) != 0ULL;  // d4
-    Success &= (attacks & bb_Square(35)) != 0ULL;  // e5
-    Success &= (attacks & bb_Square(42)) != 0ULL;  // f6
-    Success &= (attacks & bb_Square(49)) != 0ULL;  // g7
-    Success &= (attacks & bb_Square(56)) != 0ULL;  // h8
+    Success &= (attacks & bb_Square(36)) != 0ULL;  // e5
+    Success &= (attacks & bb_Square(45)) != 0ULL;  // f6
+    Success &= (attacks & bb_Square(54)) != 0ULL;  // g7
+    Success &= (attacks & bb_Square(63)) != 0ULL;  // h8
 
     return Success;
 }
@@ -1960,15 +1960,15 @@ static bool test_bbPseudoAttacksBishop_h1() {
     bool Success = true;
 
     // Bishop at h1 (sq=7): only anti-diagonal h1-a8
-    // g2(14), f3(21), e4(28), d5(34), c6(41), b7(48), a8(56) = 7 squares
+    // g2(14), f3(21), e4(28), d5(35), c6(42), b7(49), a8(56) = 7 squares
     Bitboard attacks = BB_PseudoAttacks_Bishop[7];
     Success &= bb_popcount(attacks) == 7;
     Success &= (attacks & bb_Square(14)) != 0ULL;  // g2
     Success &= (attacks & bb_Square(21)) != 0ULL;  // f3
     Success &= (attacks & bb_Square(28)) != 0ULL;  // e4
-    Success &= (attacks & bb_Square(34)) != 0ULL;  // d5
-    Success &= (attacks & bb_Square(41)) != 0ULL;  // c6
-    Success &= (attacks & bb_Square(48)) != 0ULL;  // b7
+    Success &= (attacks & bb_Square(35)) != 0ULL;  // d5
+    Success &= (attacks & bb_Square(42)) != 0ULL;  // c6
+    Success &= (attacks & bb_Square(49)) != 0ULL;  // b7
     Success &= (attacks & bb_Square(56)) != 0ULL;  // a8
 
     return Success;
@@ -1981,23 +1981,23 @@ static bool test_bbPseudoAttacksRook_d4() {
     Bitboard attacks = BB_PseudoAttacks_Rook[27];
     Success &= bb_popcount(attacks) == 14;
 
-    // File d: d1(4), d2(12), d3(20), d5(35), d6(43), d7(51), d8(59)
-    Success &= (attacks & bb_Square(4))  != 0ULL;  // d1
-    Success &= (attacks & bb_Square(12)) != 0ULL;  // d2
-    Success &= (attacks & bb_Square(20)) != 0ULL;  // d3
+    // File d: d1(3), d2(11), d3(19), d5(35), d6(43), d7(51), d8(59)
+    Success &= (attacks & bb_Square(3)) != 0ULL;   // d1
+    Success &= (attacks & bb_Square(11)) != 0ULL;  // d2
+    Success &= (attacks & bb_Square(19)) != 0ULL;  // d3
     Success &= (attacks & bb_Square(35)) != 0ULL;  // d5
     Success &= (attacks & bb_Square(43)) != 0ULL;  // d6
     Success &= (attacks & bb_Square(51)) != 0ULL;  // d7
     Success &= (attacks & bb_Square(59)) != 0ULL;  // d8
 
-    // Rank 4: a4(32), b4(33), c4(34), e4(36), f4(37), g4(38), h4(39)
-    Success &= (attacks & bb_Square(32)) != 0ULL;  // a4
-    Success &= (attacks & bb_Square(33)) != 0ULL;  // b4
-    Success &= (attacks & bb_Square(34)) != 0ULL;  // c4
-    Success &= (attacks & bb_Square(36)) != 0ULL;  // e4
-    Success &= (attacks & bb_Square(37)) != 0ULL;  // f4
-    Success &= (attacks & bb_Square(38)) != 0ULL;  // g4
-    Success &= (attacks & bb_Square(39)) != 0ULL;  // h4
+    // Rank 4: a4(24), b4(25), c4(26), e4(28), f4(29), g4(30), h4(31)
+    Success &= (attacks & bb_Square(24)) != 0ULL;  // a4
+    Success &= (attacks & bb_Square(25)) != 0ULL;  // b4
+    Success &= (attacks & bb_Square(26)) != 0ULL;  // c4
+    Success &= (attacks & bb_Square(28)) != 0ULL;  // e4
+    Success &= (attacks & bb_Square(29)) != 0ULL;  // f4
+    Success &= (attacks & bb_Square(30)) != 0ULL;  // g4
+    Success &= (attacks & bb_Square(31)) != 0ULL;  // h4
 
     // d4 itself must NOT be in the attack mask
     Success &= (attacks & bb_Square(27)) == 0ULL;
@@ -2151,13 +2151,13 @@ static bool test_bbPseudoAttacksBishop_expectedPopcounts() {
 
     // Center squares: 13 attacks each (both diagonals maxed out)
     Success &= bb_popcount(BB_PseudoAttacks_Bishop[27]) == 13;  // d4
-    Success &= bb_popcount(BB_PseudoAttacks_Bishop[35]) == 13;  // e4
-    Success &= bb_popcount(BB_PseudoAttacks_Bishop[34]) == 13;  // d5
-    Success &= bb_popcount(BB_PseudoAttacks_Bishop[42]) == 13;  // e5
+    Success &= bb_popcount(BB_PseudoAttacks_Bishop[28]) == 13;  // e4
+    Success &= bb_popcount(BB_PseudoAttacks_Bishop[35]) == 13;  // d5
+    Success &= bb_popcount(BB_PseudoAttacks_Bishop[36]) == 13;  // e5
 
-    // Edge non-corner same-color squares (e.g., a2=8, h2=15): 5 attacks
-    Success &= bb_popcount(BB_PseudoAttacks_Bishop[8])  == 5;  // a2
-    Success &= bb_popcount(BB_PseudoAttacks_Bishop[15]) == 5;  // h2
+    // Edge non-corner squares (e.g., a2=8, h2=15): 7 attacks (6+1 on the two diagonals)
+    Success &= bb_popcount(BB_PseudoAttacks_Bishop[8])  == 7;  // a2
+    Success &= bb_popcount(BB_PseudoAttacks_Bishop[15]) == 7;  // h2
 
     return Success;
 }
@@ -2171,17 +2171,16 @@ static bool test_bbPseudoAttacksRook_expectedPopcounts() {
     Success &= bb_popcount(BB_PseudoAttacks_Rook[56]) == 14;  // a8
     Success &= bb_popcount(BB_PseudoAttacks_Rook[63]) == 14;  // h8
 
-    // Edge non-corner squares have fewer than 14 (some directions hit board edge sooner)
-    // a-file edges (not corner): 13 attacks (7 along file - 1 self + 7 along rank)
-    // Wait, actually: a2 has 6 other squares on file a + 7 on rank 2 = 13
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[8])  == 13;  // a2
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[15]) == 13;  // h2
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[48]) == 13;  // a7
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[55]) == 13;  // h7
+    // Edge non-corner squares: 14 attacks (7 along file + 7 along rank)
+    // Every non-corner square has 7 squares on its file and 7 on its rank.
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[8])  == 14;  // a2
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[15]) == 14;  // h2
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[48]) == 14;  // a7
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[55]) == 14;  // h7
 
-    // b1(1): 6 on file b + 7 on rank 1 = 13
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[1])  == 13;  // b1
-    Success &= bb_popcount(BB_PseudoAttacks_Rook[6])  == 13;  // g1
+    // b1(1), g1(6): 7 on file + 7 on rank = 14
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[1])  == 14;  // b1
+    Success &= bb_popcount(BB_PseudoAttacks_Rook[6])  == 14;  // g1
 
     return Success;
 }
@@ -2202,20 +2201,20 @@ static bool test_bbSlidingBishop_emptyBoard() {
 static bool test_bbSlidingBishop_blockedForward() {
     bool Success = true;
 
-    // Bishop at d4 (sq=27), blocker on e5 (sq=35)
-    // NE diag: e5(35) is included but f6(42) is NOT
-    Bitboard occupied = bb_Square(35);
+    // Bishop at d4 (sq=27), blocker on e5 (sq=36)
+    // NE diag: e5(36) is included but f6(45) is NOT
+    Bitboard occupied = bb_Square(36);
     Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
 
     // e5 must be in the attack set (can capture)
-    Success &= (attacks & bb_Square(35)) != 0ULL;
+    Success &= (attacks & bb_Square(36)) != 0ULL;
 
     // f6 must NOT be in the attack set (blocked by e5)
-    Success &= (attacks & bb_Square(42)) == 0ULL;
+    Success &= (attacks & bb_Square(45)) == 0ULL;
     // g7 must NOT be in the attack set
-    Success &= (attacks & bb_Square(49)) == 0ULL;
+    Success &= (attacks & bb_Square(54)) == 0ULL;
     // h8 must NOT be in the attack set
-    Success &= (attacks & bb_Square(56)) == 0ULL;
+    Success &= (attacks & bb_Square(63)) == 0ULL;
 
     return Success;
 }
@@ -2223,16 +2222,16 @@ static bool test_bbSlidingBishop_blockedForward() {
 static bool test_bbSlidingBishop_blockedSW() {
     bool Success = true;
 
-    // Bishop at d4 (sq=27), blocker on c3 (sq=19)
-    // SW diag: c3(19) included, b2(10) and a1(0) excluded
-    Bitboard occupied = bb_Square(19);
+    // Bishop at d4 (sq=27), blocker on c3 (sq=18)
+    // SW diag: c3(18) included, b2(9) and a1(0) excluded
+    Bitboard occupied = bb_Square(18);
     Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
 
     // c3 must be in the attack set
-    Success &= (attacks & bb_Square(19)) != 0ULL;
+    Success &= (attacks & bb_Square(18)) != 0ULL;
 
     // b2 must NOT be in the attack set
-    Success &= (attacks & bb_Square(10)) == 0ULL;
+    Success &= (attacks & bb_Square(9)) == 0ULL;
     // a1 must NOT be in the attack set
     Success &= (attacks & bb_Square(0)) == 0ULL;
 
@@ -2254,18 +2253,18 @@ static bool test_bbSlidingBishop_cornerBlocked() {
     bool Success = true;
 
     // Bishop at a1 (sq=0), blocker on d4 (sq=27)
-    // Only a1-b2-c3-d4 covered (4 squares), nothing beyond d4
+    // b2-c3-d4 covered (3 squares, own square excluded), nothing beyond d4
     Bitboard occupied = bb_Square(27);
     Bitboard attacks = bb_slidingAttack_bishop(0, occupied);
 
-    Success &= bb_popcount(attacks) == 4;
-    Success &= (attacks & bb_Square(10)) != 0ULL;  // b2
-    Success &= (attacks & bb_Square(19)) != 0ULL;  // c3
+    Success &= bb_popcount(attacks) == 3;
+    Success &= (attacks & bb_Square(9)) != 0ULL;   // b2
+    Success &= (attacks & bb_Square(18)) != 0ULL;  // c3
     Success &= (attacks & bb_Square(27)) != 0ULL;  // d4 (the blocker, capturable)
-    Success &= (attacks & bb_Square(35)) == 0ULL;  // e5 blocked
-    Success &= (attacks & bb_Square(42)) == 0ULL;  // f6 blocked
-    Success &= (attacks & bb_Square(49)) == 0ULL;  // g7 blocked
-    Success &= (attacks & bb_Square(56)) == 0ULL;  // h8 blocked
+    Success &= (attacks & bb_Square(36)) == 0ULL;  // e5 blocked
+    Success &= (attacks & bb_Square(45)) == 0ULL;  // f6 blocked
+    Success &= (attacks & bb_Square(54)) == 0ULL;  // g7 blocked
+    Success &= (attacks & bb_Square(63)) == 0ULL;  // h8 blocked
 
     return Success;
 }
@@ -2284,29 +2283,29 @@ static bool test_bbSlidingBishop_h1Empty() {
 static bool test_bbSlidingBishop_multipleBlockers() {
     bool Success = true;
 
-    // Bishop at d4 (sq=27), blockers on e5(35) and c3(19)
-    Bitboard occupied = bb_Square(35) | bb_Square(19);
+    // Bishop at d4 (sq=27), blockers on e5(36) and c3(18)
+    Bitboard occupied = bb_Square(36) | bb_Square(18);
     Bitboard attacks = bb_slidingAttack_bishop(27, occupied);
 
     // Both blockers included (capturable)
-    Success &= (attacks & bb_Square(35)) != 0ULL;
-    Success &= (attacks & bb_Square(19)) != 0ULL;
+    Success &= (attacks & bb_Square(36)) != 0ULL;
+    Success &= (attacks & bb_Square(18)) != 0ULL;
 
     // Beyond e5: f6,g7,h8 all blocked
-    Success &= (attacks & bb_Square(42)) == 0ULL;
-    Success &= (attacks & bb_Square(49)) == 0ULL;
-    Success &= (attacks & bb_Square(56)) == 0ULL;
+    Success &= (attacks & bb_Square(45)) == 0ULL;
+    Success &= (attacks & bb_Square(54)) == 0ULL;
+    Success &= (attacks & bb_Square(63)) == 0ULL;
 
     // Beyond c3: b2,a1 all blocked
-    Success &= (attacks & bb_Square(10)) == 0ULL;
+    Success &= (attacks & bb_Square(9)) == 0ULL;
     Success &= (attacks & bb_Square(0)) == 0ULL;
 
     // Other diags unaffected: anti-diag still has g1,f2,e3,c5,b6,a7
-    Success &= (attacks & bb_Square(7)) != 0ULL;   // g1
-    Success &= (attacks & bb_Square(14)) != 0ULL;  // f2
-    Success &= (attacks & bb_Square(21)) != 0ULL;  // e3
-    Success &= (attacks & bb_Square(33)) != 0ULL;  // c5
-    Success &= (attacks & bb_Square(40)) != 0ULL;  // b6
+    Success &= (attacks & bb_Square(6)) != 0ULL;   // g1
+    Success &= (attacks & bb_Square(13)) != 0ULL;  // f2
+    Success &= (attacks & bb_Square(20)) != 0ULL;  // e3
+    Success &= (attacks & bb_Square(34)) != 0ULL;  // c5
+    Success &= (attacks & bb_Square(41)) != 0ULL;  // b6
     Success &= (attacks & bb_Square(48)) != 0ULL;  // a7
 
     return Success;
@@ -2420,9 +2419,9 @@ static bool test_bbSlidingRook_blockedEast() {
     Success &= (attacks & bb_Square(28)) != 0ULL;
 
     // f4-h4 must NOT be in the attack set
-    Success &= (attacks & bb_Square(36)) == 0ULL;  // f4
-    Success &= (attacks & bb_Square(37)) == 0ULL;  // g4
-    Success &= (attacks & bb_Square(38)) == 0ULL;  // h4
+    Success &= (attacks & bb_Square(29)) == 0ULL;  // f4
+    Success &= (attacks & bb_Square(30)) == 0ULL;  // g4
+    Success &= (attacks & bb_Square(31)) == 0ULL;  // h4
 
     return Success;
 }
@@ -2455,19 +2454,19 @@ static bool test_bbSlidingRook_multipleBlockers() {
     Success &= (attacks & bb_Square(59)) == 0ULL;
 
     // Beyond e4: f4,g4,h4 blocked
-    Success &= (attacks & bb_Square(36)) == 0ULL;
-    Success &= (attacks & bb_Square(37)) == 0ULL;
-    Success &= (attacks & bb_Square(38)) == 0ULL;
+    Success &= (attacks & bb_Square(29)) == 0ULL;
+    Success &= (attacks & bb_Square(30)) == 0ULL;
+    Success &= (attacks & bb_Square(31)) == 0ULL;
 
     // South direction unaffected: d1-d3 still reachable
-    Success &= (attacks & bb_Square(20)) != 0ULL;  // d3
-    Success &= (attacks & bb_Square(12)) != 0ULL;  // d2
-    Success &= (attacks & bb_Square(4))  != 0ULL;  // d1
+    Success &= (attacks & bb_Square(19)) != 0ULL;  // d3
+    Success &= (attacks & bb_Square(11)) != 0ULL;  // d2
+    Success &= (attacks & bb_Square(3))  != 0ULL;  // d1
 
     // West direction unaffected: c4,a4 still reachable
-    Success &= (attacks & bb_Square(34)) != 0ULL;  // c4
-    Success &= (attacks & bb_Square(33)) != 0ULL;  // b4
-    Success &= (attacks & bb_Square(32)) != 0ULL;  // a4
+    Success &= (attacks & bb_Square(26)) != 0ULL;  // c4
+    Success &= (attacks & bb_Square(25)) != 0ULL;  // b4
+    Success &= (attacks & bb_Square(24)) != 0ULL;  // a4
 
     return Success;
 }
