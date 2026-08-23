@@ -3608,6 +3608,133 @@ static bool test_bbGenQueen_matchesOracle() {
     return Success;
 }
 
+// Independent reference: recomputes pawn destinations from rank/file math so it
+// does not depend on BB_PawnPushes/BB_PawnAttacks. White advances toward higher
+// ranks (+1, double-push from rank 1); black toward lower ranks (-1, rank 6).
+static Bitboard t_expectedPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB,
+                                    Color color, int enPassant) {
+    int dir = (color == WHITE) ? 1 : -1;
+    int boostRank = (color == WHITE) ? 1 : 6;
+    Bitboard froms = pawnBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        int rank = from / 8;
+        int file = from % 8;
+        int nr = rank + dir;
+        if (nr >= 0 && nr < 8) {
+            int single = nr * 8 + file;
+            if (!(allOccBB & bb_Square(single))) {
+                result |= bb_Square(single);
+                if (rank == boostRank) {
+                    int nr2 = rank + 2 * dir;
+                    if (nr2 >= 0 && nr2 < 8) {
+                        int dbl = nr2 * 8 + file;
+                        if (!(allOccBB & bb_Square(dbl))) result |= bb_Square(dbl);
+                    }
+                }
+            }
+        }
+        for (int df = -1; df <= 1; df += 2) {
+            int cf = file + df;
+            if (cf < 0 || cf >= 8 || nr < 0 || nr >= 8) continue;
+            int cap = nr * 8 + cf;
+            if (enemyBB & bb_Square(cap)) result |= bb_Square(cap);
+            if (enPassant >= 0 && cap == enPassant && !(allOccBB & bb_Square(cap)))
+                result |= bb_Square(cap);
+        }
+    }
+    return result;
+}
+
+static bool test_bbGenPawn_singlePush() {
+    // A lone white pawn on e2 (12) may push one (e3=20) and two (e4=28) squares.
+    Bitboard result = bb_genPawnMoves(bb_Square(12), 0, 0, WHITE, -1);
+    return result == (bb_Square(20) | bb_Square(28));
+}
+
+static bool test_bbGenPawn_doublePushBlocked() {
+    // White pawn on e2 (12) with a friendly on e3 (20): the single push is
+    // blocked, so the double push must also be suppressed (no leaping a blocker).
+    Bitboard allOccBB = bb_Square(20);
+    Bitboard result = bb_genPawnMoves(bb_Square(12), 0, allOccBB, WHITE, -1);
+    return result == 0;
+}
+
+static bool test_bbGenPawn_capture() {
+    // White pawn on e4 (28) with enemies on d5 (35) and f5 (37): both diagonal
+    // captures plus the single push to e5 (36).
+    Bitboard enemyBB = bb_Square(35) | bb_Square(37);
+    Bitboard allOccBB = enemyBB;
+    Bitboard result = bb_genPawnMoves(bb_Square(28), enemyBB, allOccBB, WHITE, -1);
+    return result == (bb_Square(35) | bb_Square(36) | bb_Square(37));
+}
+
+static bool test_bbGenPawn_enPassant() {
+    // White pawn on e5 (36); black pawn double-pushed to d5 (35) leaves the
+    // en-passant target at d6 (43). The pawn captures en passant to d6 and also
+    // has the normal push to e6 (44).
+    Bitboard enemyBB = bb_Square(35);
+    Bitboard allOccBB = bb_Square(35);
+    Bitboard result = bb_genPawnMoves(bb_Square(36), enemyBB, allOccBB, WHITE, 43);
+    return result == (bb_Square(43) | bb_Square(44));
+}
+
+static bool test_bbGenPawn_noEnPassantWhenNotAttacked() {
+    // A white pawn on e4 (28, rank 3) attacks only rank 4 (d5=35, f5=37); the
+    // en-passant target d6 (43, rank 5) is not attacked, so it must not produce a
+    // move. Only the push (e5=36) and the normal capture on d5 (35) are generated.
+    Bitboard enemyBB = bb_Square(35);
+    Bitboard allOccBB = bb_Square(35);
+    Bitboard result = bb_genPawnMoves(bb_Square(28), enemyBB, allOccBB, WHITE, 43);
+    return result == (bb_Square(35) | bb_Square(36));
+}
+
+static bool test_bbGenPawn_promotion() {
+    // White pawn on e7 (52): the push to e8 (60) and the captures on d8 (59) and
+    // f8 (61) all land on the 8th rank, i.e. they are promotions.
+    Bitboard enemyBB = bb_Square(59) | bb_Square(61);
+    Bitboard allOccBB = enemyBB;
+    Bitboard result = bb_genPawnMoves(bb_Square(52), enemyBB, allOccBB, WHITE, -1);
+    return result == (bb_Square(59) | bb_Square(60) | bb_Square(61));
+}
+
+static bool test_bbGenPawn_black() {
+    // A lone black pawn on e7 (52, the 7th rank = black's starting rank) advances
+    // toward lower ranks: single push to e6 (44) and double push to e5 (36).
+    Bitboard result = bb_genPawnMoves(bb_Square(52), 0, 0, BLACK, -1);
+    return result == (bb_Square(44) | bb_Square(36));
+}
+
+static bool test_bbGenPawn_matchesOracle() {
+    bool Success = true;
+    // Every single-pawn position on an empty board, for both colors.
+    for (Color color = WHITE; color <= BLACK; ++color) {
+        for (int sq = 0; sq < 64; ++sq) {
+            Bitboard pawnBB = bb_Square(sq);
+            Success &= bb_genPawnMoves(pawnBB, 0, 0, color, -1) ==
+                       t_expectedPawnMoves(pawnBB, 0, 0, color, -1);
+        }
+    }
+    // Plus occupied / capture / en-passant cases.
+    Bitboard casesP[5], casesO[5], casesE[5];
+    Color casesC[5];
+    int casesEP[5];
+    casesP[0] = casesP[1] = casesP[2] = casesP[3] = casesP[4] = bb_Square(28);
+    casesC[0] = WHITE; casesC[1] = WHITE; casesC[2] = WHITE; casesC[3] = WHITE; casesC[4] = BLACK;
+    casesEP[0] = -1; casesEP[1] = -1; casesEP[2] = -1; casesEP[3] = 43; casesEP[4] = -1;
+    casesO[0] = 0;                                  casesE[0] = 0;            // lone push
+    casesO[1] = bb_Square(36);                     casesE[1] = 0;            // single push blocked
+    casesO[2] = bb_Square(35) | bb_Square(37);    casesE[2] = casesO[2];   // both captures
+    casesO[3] = bb_Square(35);                     casesE[3] = bb_Square(35);// EP target (d6=43) not attacked
+    casesO[4] = 0;                                  casesE[4] = 0;            // black pawn single push
+    for (int i = 0; i < 5; ++i) {
+        Success &= bb_genPawnMoves(casesP[i], casesE[i], casesO[i], casesC[i], casesEP[i]) ==
+                   t_expectedPawnMoves(casesP[i], casesE[i], casesO[i], casesC[i], casesEP[i]);
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3621,6 +3748,7 @@ extern Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyB
 extern Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB);
+extern Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB, Color color, int enPassant);
 
 int main() {
     bool Success = true;
@@ -3821,6 +3949,15 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenQueen_blocksFriendly();
     Success &= test_bbGenQueen_capturesSeparated();
     Success &= test_bbGenQueen_matchesOracle();
+
+    Success &= test_bbGenPawn_singlePush();
+    Success &= test_bbGenPawn_doublePushBlocked();
+    Success &= test_bbGenPawn_capture();
+    Success &= test_bbGenPawn_enPassant();
+    Success &= test_bbGenPawn_noEnPassantWhenNotAttacked();
+    Success &= test_bbGenPawn_promotion();
+    Success &= test_bbGenPawn_black();
+    Success &= test_bbGenPawn_matchesOracle();
     assert(Success);
 
     return !Success;

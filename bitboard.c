@@ -729,6 +729,61 @@ Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB)
     return result;
 }
 
+// bb_genPawnMoves returns every destination square a set of pawns of a given
+// color can move to: quiet pushes (single, and a double push only from the
+// starting rank when the single-push square is free), diagonal captures, en
+// passant, and promotions (which are just pushes/captures landing on the
+// promotion rank; the four promotion types are resolved later at move encoding).
+//
+// Color and the en-passant square are passed explicitly because a pawn's rank
+// alone does not determine its color, and en passant is not implied by occupancy.
+Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB,
+                         Color color, int enPassant) {
+    // White pawns advance toward higher ranks (+1), black toward lower (-1).
+    int dir = (color == WHITE) ? 1 : -1;
+    // A double push is legal only from the starting rank (1 for white, 6 for black).
+    int boostRank = (color == WHITE) ? 1 : 6;
+
+    Bitboard froms = pawnBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        int rank = from / 8;
+        int file = from % 8;
+        int nr = rank + dir;
+
+        // A single push is allowed when the square directly ahead is empty. A
+        // double push is additionally allowed only from the starting rank and only
+        // when that same single-push square is empty, so a pawn cannot leap over an
+        // occupied square (matches chess.c's boost gating).
+        if (nr >= 0 && nr < 8) {
+            int single = nr * 8 + file;
+            if (!(allOccBB & bb_Square(single))) {
+                result |= bb_Square(single);
+                if (rank == boostRank) {
+                    int nr2 = rank + 2 * dir;
+                    if (nr2 >= 0 && nr2 < 8) {
+                        int dbl = nr2 * 8 + file;
+                        if (!(allOccBB & bb_Square(dbl)))
+                            result |= bb_Square(dbl);
+                    }
+                }
+            }
+        }
+
+        // BB_PawnAttacks holds the two diagonal-forward squares. Normal captures
+        // are the enemy ones; en passant is the (empty) en-passant target when this
+        // pawn attacks it and that square is unoccupied.
+        Bitboard attacks = BB_PawnAttacks[color][from];
+        result |= (attacks & enemyBB);
+        if (enPassant >= 0 && (attacks & bb_Square(enPassant)) &&
+            !(allOccBB & bb_Square(enPassant))) {
+            result |= bb_Square(enPassant);
+        }
+    }
+    return result;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;
