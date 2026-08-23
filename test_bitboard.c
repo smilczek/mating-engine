@@ -3342,6 +3342,97 @@ static bool test_bbGenKing_matchesOracle() {
     return Success;
 }
 
+// --- Bishop move generation (sliding, captures separated) ---
+
+// Independent oracle using the NAIVE sliding attack (bb_slidingAttack_bishop)
+// instead of the magic-table bb_bishopAttacks, so the move-generation layer is
+// cross-checked against a different attack implementation.
+static Bitboard t_expectedBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyBB) {
+    Bitboard friendlyBB = allOccBB & ~enemyBB;
+    Bitboard froms = bishopBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        Bitboard attacks = bb_slidingAttack_bishop(from, allOccBB);
+        // Quiet moves (empty squares) and captures (enemy squares) combined;
+        // friendly blockers are excluded.
+        result |= (attacks & ~friendlyBB);
+    }
+    return result;
+}
+
+static bool test_bbGenBishop_center() {
+    // A lone bishop on d4 reaches all 13 diagonal squares on an empty board.
+    Bitboard result = bb_genBishopMoves(bb_Square(27), 0, 0);
+    bool Success = result == bb_bishopAttacks(27, 0);
+    Success &= bb_popcount(result) == 13;
+    return Success;
+}
+
+static bool test_bbGenBishop_edge() {
+    // A lone bishop on a1 reaches exactly the 7 squares of its main diagonal.
+    Bitboard result = bb_genBishopMoves(bb_Square(0), 0, 0);
+    bool Success = result == bb_bishopAttacks(0, 0);
+    Success &= bb_popcount(result) == 7;
+    return Success;
+}
+
+static bool test_bbGenBishop_capture() {
+    // An enemy on the first ray square is a capture; squares behind it are blocked.
+    Bitboard allOccBB = bb_Square(34);   // enemy on e5 (d4's first NE square)
+    Bitboard enemyBB = bb_Square(34);
+    Bitboard result = bb_genBishopMoves(bb_Square(27), allOccBB, enemyBB);
+    bool Success = (result & enemyBB) == enemyBB;        // e5 is a capture
+    Success &= (result & bb_Square(43)) == 0;            // f6 behind the capture is blocked
+    return Success;
+}
+
+static bool test_bbGenBishop_blocksFriendly() {
+    // A friendly on the first ray square is not a destination (nor is anything beyond).
+    Bitboard allOccBB = bb_Square(34);   // friendly on e5
+    Bitboard result = bb_genBishopMoves(bb_Square(27), allOccBB, 0);
+    bool Success = (result & bb_Square(34)) == 0;        // friendly e5 not a move
+    Success &= (result & bb_Square(43)) == 0;           // f6 behind the friendly is blocked
+    return Success;
+}
+
+static bool test_bbGenBishop_capturesSeparated() {
+    // Enemy on one ray, friendly on another: the two are cleanly separated and the
+    // rays are correctly stopped at their first blocker.
+    Bitboard allOccBB = bb_Square(34) | bb_Square(18); // enemy e5, friendly c3
+    Bitboard enemyBB = bb_Square(34);
+    Bitboard result = bb_genBishopMoves(bb_Square(27), allOccBB, enemyBB);
+    Bitboard quiet = result & ~enemyBB;
+    Bitboard captures = result & enemyBB;
+    bool Success = captures == enemyBB;                 // exactly one capture (e5)
+    Success &= (result & bb_Square(18)) == 0;           // friendly c3 excluded
+    Success &= (result & bb_Square(43)) == 0;          // beyond enemy e5
+    Success &= (result & bb_Square(10)) == 0;          // beyond friendly c3
+    Success &= (quiet | captures) == result;            // quiet+captures == full result
+    Success &= (quiet & captures) == 0;                 // disjoint
+    return Success;
+}
+
+static bool test_bbGenBishop_matchesOracle() {
+    // Every single-bishop position must match the naive sliding-attack oracle.
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard bishopBB = bb_Square(sq);
+        Success &= bb_genBishopMoves(bishopBB, 0, 0) == t_expectedBishopMoves(bishopBB, 0, 0);
+    }
+    // Plus occupied / capture / friendly cases.
+    Bitboard casesB[4], casesO[4], casesE[4];
+    casesB[0] = casesB[1] = casesB[2] = casesB[3] = bb_Square(27);
+    casesO[0] = 0;
+    casesO[1] = bb_Square(34);                 casesE[1] = bb_Square(34);   // enemy blocker
+    casesO[2] = bb_Square(34);                 casesE[2] = 0;                // friendly blocker
+    casesO[3] = bb_Square(34) | bb_Square(18); casesE[3] = bb_Square(34);   // mixed
+    for (int i = 0; i < 4; ++i) {
+        Success &= bb_genBishopMoves(casesB[i], casesO[i], casesE[i]) == t_expectedBishopMoves(casesB[i], casesO[i], casesE[i]);
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3351,6 +3442,7 @@ extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB);
 extern Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB);
+extern Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyBB);
 
 int main() {
     bool Success = true;
@@ -3533,6 +3625,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenKing_capture();
     Success &= test_bbGenKing_blocksFriendly();
     Success &= test_bbGenKing_matchesOracle();
+    Success &= test_bbGenBishop_center();
+    Success &= test_bbGenBishop_edge();
+    Success &= test_bbGenBishop_capture();
+    Success &= test_bbGenBishop_blocksFriendly();
+    Success &= test_bbGenBishop_capturesSeparated();
+    Success &= test_bbGenBishop_matchesOracle();
     assert(Success);
 
     return !Success;

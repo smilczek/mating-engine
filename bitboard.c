@@ -616,6 +616,12 @@ void bb_initRayPass(void) {
     }
 }
 
+// Forward declarations of the sliding-attack helpers used by the move
+// generators (their definitions live later, in the magic-bitboard section).
+Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
+Bitboard bb_rookAttacks(int sq, Bitboard occupied);
+Bitboard bb_queenAttacks(int sq, Bitboard occupied);
+
 // --- Move generation (bitboard) ---
 //
 // bb_genKnightMoves returns the bitboard of every square the knights in
@@ -652,6 +658,32 @@ Bitboard bb_genKingMoves(int kingSq, Bitboard friendlyBB, Bitboard enemyBB) {
     (void) enemyBB;
     // The king may not step onto a friendly square.
     return BB_PseudoAttacks_King[kingSq] & ~friendlyBB;
+}
+
+// bb_genBishopMoves returns the bitboard of every square the bishops in
+// bishopBB can move to. bb_bishopAttacks gives the empty squares a bishop slides
+// through plus the first occupied square in each of its four diagonals (which
+// may be a friendly or an enemy piece); friendly squares are excluded.
+//
+// Captures and quiet moves are separated: within the result, the capture subset
+// is `result & enemyBB` and the quiet subset is `result & ~enemyBB`, and the
+// two are disjoint.
+//
+//   bishopBB : bitboard of the bishops (the "from" squares).
+//   allOccBB : all occupied squares (both colors) — stops the slide.
+//   enemyBB  : enemy pieces (marks which result squares are captures).
+
+Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyBB) {
+    // Friendly = occupied squares that are not enemy squares.
+    Bitboard friendlyBB = allOccBB & ~enemyBB;
+    Bitboard froms = bishopBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        // attacks = quiet squares + first blocker per ray; drop friendly blockers.
+        result |= (bb_bishopAttacks(from, allOccBB) & ~friendlyBB);
+    }
+    return result;
 }
 
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
