@@ -75,7 +75,7 @@
 [x] 38. Implement `bb_moveIsCastling()`, `bb_moveIsEnPassant()`, `bb_moveIsPromotion()`
 
 ## Move Application
-[ ] 39. Implement `bb_applyMove()` — update all bitboards, castling rights, en passant, halfmove clock
+[x] 39. Implement `bb_applyMove()` — update all bitboards, castling rights, en passant, halfmove/fullmove clock (standard rules: reset halfmove on pawn/capture, increment fullmove after black)
 [ ] 40. Implement `bb_unapplyMove()` — reversible move for search (critical for performance)
 
 ## Check / Legality

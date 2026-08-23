@@ -1029,6 +1029,119 @@ bb_MoveList bb_genPseudoLegalMoves(BitboardState *s) {
     return ml;
 }
 
+// Find the piece type sitting on `sq` for colour `c`, or -1 if the square is
+// empty. Used by bb_applyMove to know which bitboard to clear and how to
+// update castling rights.
+static int bb_pieceTypeAt(BitboardState *s, Color c, int sq) {
+    for (int pt = 0; pt < 6; pt++)
+        if (s->Pieces[c][pt] & bb_Square(sq))
+            return pt;
+    return -1;
+}
+
+// Apply a (pseudo-)legal move, mirroring chess.c's ch_applyMove. The move is
+// assumed pseudo-legal (the caller / bb_filterLegalMoves guarantees the king is
+// not left in check).
+//
+//   s : the position to modify in place (the active colour is the mover).
+//   m : the encoded move (from/to/promotion/flag).
+//
+// Everything is derived from the pre-move state first (moving piece, captured
+// piece, whether it was a capture), then applied: clear the mover, place it (or
+// its promotion) on the destination, remove the captured piece, move the rook
+// for castling, recompute occupancy, then refresh en passant / castling rights /
+// clocks and pass the turn.
+//
+// HalfmoveClock resets on a pawn move or a capture, otherwise increments;
+// FullmoveNumber increments after a black move (per the user's choice to follow
+// standard rules rather than chess.c, which leaves these untouched).
+void bb_applyMove(BitboardState *s, bb_Move m) {
+    bb_MvDecoded d = bb_decodeMove(m);
+    int from = d.from, to = d.to;
+    Color c  = s->ActiveColor;
+    int isEnPassant = bb_moveIsEnPassant(m);
+    int isCastling  = bb_moveIsCastling(m);
+
+    int moverType = bb_pieceTypeAt(s, c, from);
+
+    // A capture is an en passant, or the destination already held an enemy piece.
+    int wasCapture = isEnPassant || (s->Occupancy[c ^ 1] & bb_Square(to)) != 0;
+    int capType = -1;
+    if (wasCapture && !isEnPassant)
+        capType = bb_pieceTypeAt(s, c ^ 1, to);
+
+    // Move the piece (a promotion turns the destination into the promoted piece).
+    s->Pieces[c][moverType] &= ~bb_Square(from);
+    int destType = d.promotion ? d.promotion : moverType;
+    s->Pieces[c][destType] |= bb_Square(to);
+
+    // Remove the captured piece.
+    if (isEnPassant) {
+        int epSq = (from / 8) * 8 + (to % 8);  // the enemy pawn beside the pawn
+        s->Pieces[c ^ 1][PAWN] &= ~bb_Square(epSq);
+    } else if (capType >= 0) {
+        s->Pieces[c ^ 1][capType] &= ~bb_Square(to);
+    }
+
+    // Castling: the rook also moves (h->f king-side, a->d queen-side).
+    if (isCastling) {
+        int rank = from / 8;
+        int rookFrom, rookTo;
+        if (to % 8 == 2) { rookFrom = rank * 8 + 0; rookTo = rank * 8 + 3; }
+        else             { rookFrom = rank * 8 + 7; rookTo = rank * 8 + 5; }
+        s->Pieces[c][ROOK] &= ~bb_Square(rookFrom);
+        s->Pieces[c][ROOK] |= bb_Square(rookTo);
+    }
+
+    bb_updateOccupancy(s);
+
+    // En passant target: always cleared, then re-set for a double push that
+    // passes an enemy pawn on the adjacent file.
+    s->EnPassant = -1;
+    if (moverType == PAWN) {
+        int fromRank = from / 8, toRank = to / 8, toFile = to % 8;
+        int Distance = toRank - fromRank;
+        int AbsDistance = Distance < 0 ? -Distance : Distance;
+        if (AbsDistance == 2) {
+            Bitboard enemyPawns = s->Pieces[c ^ 1][PAWN];
+            int left  = (toFile != 0) ? toRank * 8 + (toFile - 1) : -1;
+            int right = (toFile != 7) ? toRank * 8 + (toFile + 1) : -1;
+            int hasAdj = (left  >= 0 && (enemyPawns & bb_Square(left)))  ||
+                         (right >= 0 && (enemyPawns & bb_Square(right)));
+            if (hasAdj)
+                s->EnPassant = (from + to) / 2;  // the square the pawn passed
+        }
+    }
+
+    // Castling rights: lost when the king moves, or when a home-corner rook moves.
+    if (moverType == KING) {
+        if (c == WHITE) s->Castling &= ~(BB_CASTLE_WK | BB_CASTLE_WQ);
+        else           s->Castling &= ~(BB_CASTLE_BK | BB_CASTLE_BQ);
+    } else if (moverType == ROOK) {
+        if (from % 8 == 0) {
+            if (c == WHITE) s->Castling &= ~BB_CASTLE_WQ;
+            else          s->Castling &= ~BB_CASTLE_BQ;
+        }
+        if (from % 8 == 7) {
+            if (c == WHITE) s->Castling &= ~BB_CASTLE_WK;
+            else          s->Castling &= ~BB_CASTLE_BK;
+        }
+    }
+
+    // Halfmove clock: reset on a pawn move or a capture, otherwise increment.
+    if (moverType == PAWN || wasCapture)
+        s->HalfmoveClock = 0;
+    else
+        s->HalfmoveClock++;
+
+    // Fullmove number: increments once Black has moved.
+    if (c == BLACK)
+        s->FullmoveNumber++;
+
+    // Pass the turn.
+    s->ActiveColor = (Color)(c ^ 1);
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

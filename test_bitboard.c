@@ -4021,6 +4021,85 @@ static bool test_bbGenPseudoLegal_enPassant() {
     return Success;
 }
 
+static bool test_bbApplyMove_quietMove() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    bb_applyMove(&BS, bb_encodeMove(1, 18, 0, 0));  // Nb1-c3
+    Success &= !(BS.Pieces[WHITE][KNIGHT] & bb_Square(1)) != 0;   // b1 vacated
+    Success &=  (BS.Pieces[WHITE][KNIGHT] & bb_Square(18)) != 0;  // c3 now a knight
+    Success &=  (BS.Pieces[WHITE][KNIGHT] & bb_Square(6)) != 0;   // g1 untouched
+    Success &=  (BS.Occupancy[WHITE] & bb_Square(18)) != 0;
+    Success &= !(BS.Occupancy[WHITE] & bb_Square(1)) != 0;
+    Success &= BS.ActiveColor == BLACK;
+    Success &= BS.HalfmoveClock == 1;   // quiet non-pawn move -> increment
+    if (!Success)
+        fprintf(stderr, "FAIL %s: hmc=%u ac=%d\n", __func__,
+                (unsigned)BS.HalfmoveClock, (int)BS.ActiveColor);
+    return Success;
+}
+
+static bool test_bbApplyMove_doublePushSetsEP() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "k7/8/8/8/3p4/8/4P3/K7 w - - 0 1");
+    bb_applyMove(&BS, bb_encodeMove(12, 28, 0, 0));  // e2-e4
+    Success &= BS.EnPassant == 20;                    // e3 target (black pawn on d4)
+    Success &=  (BS.Pieces[WHITE][PAWN] & bb_Square(28)) != 0;  // e4
+    Success &= !(BS.Pieces[WHITE][PAWN] & bb_Square(12)) != 0;  // e2 vacated
+    Success &= BS.ActiveColor == BLACK;
+    Success &= BS.HalfmoveClock == 0;                // pawn move -> reset
+    if (!Success)
+        fprintf(stderr, "FAIL %s: ep=%d hmc=%u\n", __func__,
+                BS.EnPassant, (unsigned)BS.HalfmoveClock);
+    return Success;
+}
+
+static bool test_bbApplyMove_captureResetsHMC() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "k7/8/8/8/4p3/3B4/8/K7 w - - 5 1");
+    bb_applyMove(&BS, bb_encodeMove(19, 28, 0, 0));  // Bd3xe4 (capture)
+    Success &= !(BS.Pieces[BLACK][PAWN] & bb_Square(28)) != 0;  // captured pawn gone
+    Success &=  (BS.Pieces[WHITE][BISHOP] & bb_Square(28)) != 0; // bishop on e4
+    Success &=  (BS.Occupancy[BLACK] & bb_Square(28)) == 0;
+    Success &= BS.HalfmoveClock == 0;                // capture -> reset
+    Success &= BS.ActiveColor == BLACK;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: hmc=%u\n", __func__, (unsigned)BS.HalfmoveClock);
+    return Success;
+}
+
+static bool test_bbApplyMove_promotion() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "k7/4P3/8/8/8/8/8/4K3 w - - 0 1");
+    bb_applyMove(&BS, bb_encodeMove(52, 60, QUEEN, 0));  // e7-e8=Q
+    Success &= !(BS.Pieces[WHITE][PAWN] & bb_Square(52)) != 0;  // pawn gone
+    Success &=  (BS.Pieces[WHITE][QUEEN] & bb_Square(60)) != 0; // queen on e8
+    Success &= BS.ActiveColor == BLACK;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: ac=%d\n", __func__, (int)BS.ActiveColor);
+    return Success;
+}
+
+static bool test_bbApplyMove_castling() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "k7/8/8/8/8/8/8/4K2R w K - 0 1");
+    bb_applyMove(&BS, bb_encodeMove(4, 6, 0, 0));  // O-O: Ke1-g1, Rh1-f1
+    Success &=  (BS.Pieces[WHITE][KING] & bb_Square(6)) != 0;   // king g1
+    Success &= !(BS.Pieces[WHITE][KING] & bb_Square(4)) != 0;   // not e1
+    Success &=  (BS.Pieces[WHITE][ROOK] & bb_Square(5)) != 0;   // rook f1
+    Success &= !(BS.Pieces[WHITE][ROOK] & bb_Square(7)) != 0;   // not h1
+    Success &= BS.Castling == 0;                          // rights cleared
+    Success &= BS.ActiveColor == BLACK;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: castling=%u ac=%d\n", __func__,
+                (unsigned)BS.Castling, (int)BS.ActiveColor);
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -4040,6 +4119,7 @@ extern bb_Move bb_encodeMove(int from, int to, int promotion, int flags);
 extern bb_MvDecoded bb_decodeMove(bb_Move m);
 extern int  bb_moveIsCastling(bb_Move m);
 extern bb_MoveList bb_genPseudoLegalMoves(BitboardState *s);
+extern void bb_applyMove(BitboardState *s, bb_Move m);
 extern int bb_moveIsEnPassant(bb_Move m);
 extern int bb_moveIsPromotion(bb_Move m);
 
@@ -4266,6 +4346,11 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenPseudoLegal_initial();
     Success &= test_bbGenPseudoLegal_promotion();
     Success &= test_bbGenPseudoLegal_enPassant();
+    Success &= test_bbApplyMove_quietMove();
+    Success &= test_bbApplyMove_doublePushSetsEP();
+    Success &= test_bbApplyMove_captureResetsHMC();
+    Success &= test_bbApplyMove_promotion();
+    Success &= test_bbApplyMove_castling();
     assert(Success);
 
     return !Success;
