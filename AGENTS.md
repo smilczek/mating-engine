@@ -66,7 +66,7 @@
 [x] 31. Implement `bb_genRookMoves(rookBB, allOccBB, enemyBB)` — sliding moves with captures separated
 [x] 32. Implement `bb_genQueenMoves(queenBB, allOccBB, enemyBB)` — combined sliding
 [x] 33. Implement `bb_genPawnMoves(pawnBB, enemyBB, allOccBB, color, enPassant)` — pushes, captures, promotions, en passant (color + en-passant square added: a pawn's rank alone doesn't fix its color, and en passant isn't implied by occupancy)
-[ ] 34. Implement `bb_genCastlingMoves()` — king-side and queen-side castling
+[x] 34. Implement `bb_genCastlingMoves(BitboardState *s)` — king-side and queen-side castling (state ptr needed for castling rights + occupancy; "not in/through/into check" deferred to bb_filterLegalMoves, mirroring chess.c's "simple check")
 [ ] 35. Implement `bb_genPseudoLegalMoves()` — full pseudo-legal move generator returning bitboards
 
 ## Move Encoding

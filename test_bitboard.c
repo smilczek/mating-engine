@@ -3735,6 +3735,155 @@ static bool test_bbGenPawn_matchesOracle() {
     return Success;
 }
 
+// Independent oracle for bb_genCastlingMoves: checks the squares one at a time
+// (a different formulation than the impl's bitboard intersection) so that a
+// bug in one is not hidden by the same mistake in the other.
+static bool t_sqEmpty(BitboardState *s, int sq) {
+    return !(s->AllPieces & bb_Square(sq));
+}
+static Bitboard t_expectedCastling(BitboardState *s) {
+    Color color = s->ActiveColor;
+    int rank = (color == WHITE) ? 0 : 7;
+    int home = rank * 8 + 4;
+    if (!(s->Pieces[color][KING] & bb_Square(home))) return 0;
+    Bitboard result = 0;
+    int wk = (color == WHITE) ? BB_CASTLE_WK : BB_CASTLE_BK;
+    int wq = (color == WHITE) ? BB_CASTLE_WQ : BB_CASTLE_BQ;
+    if (s->Castling & wk) {
+        if (t_sqEmpty(s, rank * 8 + 5) && t_sqEmpty(s, rank * 8 + 6))
+            result |= bb_Square(rank * 8 + 6);
+    }
+    if (s->Castling & wq) {
+        if (t_sqEmpty(s, rank * 8 + 1) && t_sqEmpty(s, rank * 8 + 2) && t_sqEmpty(s, rank * 8 + 3))
+            result |= bb_Square(rank * 8 + 2);
+    }
+    return result;
+}
+
+static bool test_bbGenCastling_whiteKingSide(void) {
+    BitboardState BS = {0};
+    BS.Pieces[WHITE][KING] = bb_Square(4);   // e1 (home)
+    BS.Pieces[WHITE][ROOK] = bb_Square(7);   // h1
+    bb_updateOccupancy(&BS);
+    BS.Castling = BB_CASTLE_WK;
+    BS.ActiveColor = WHITE;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // f1 (5) and g1 (6) empty -> king to g1 (6).
+    if (result != bb_Square(6))
+        fprintf(stderr, "FAIL %s: expected g1(6), got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == bb_Square(6);
+}
+
+static bool test_bbGenCastling_whiteQueenSide(void) {
+    BitboardState BS = {0};
+    BS.Pieces[WHITE][KING] = bb_Square(4);   // e1 (home)
+    BS.Pieces[WHITE][ROOK] = bb_Square(0);   // a1
+    bb_updateOccupancy(&BS);
+    BS.Castling = BB_CASTLE_WQ;
+    BS.ActiveColor = WHITE;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // b1 (1), c1 (2), d1 (3) empty -> king to c1 (2).
+    if (result != bb_Square(2))
+        fprintf(stderr, "FAIL %s: expected c1(2), got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == bb_Square(2);
+}
+
+static bool test_bbGenCastling_blockedKingSide(void) {
+    BitboardState BS = {0};
+    BS.Pieces[WHITE][KING] = bb_Square(4);   // e1 (home)
+    BS.Pieces[WHITE][ROOK] = bb_Square(7);   // h1
+    BS.Pieces[BLACK][PAWN] = bb_Square(5);   // f1 blocks the path
+    bb_updateOccupancy(&BS);
+    BS.Castling = BB_CASTLE_WK;
+    BS.ActiveColor = WHITE;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // f1 (5) occupied -> no king-side castling.
+    if (result != 0)
+        fprintf(stderr, "FAIL %s: expected none, got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == 0;
+}
+
+static bool test_bbGenCastling_noRights(void) {
+    BitboardState BS = {0};
+    BS.Pieces[WHITE][KING] = bb_Square(4);
+    BS.Pieces[WHITE][ROOK] = bb_Square(7);
+    bb_updateOccupancy(&BS);
+    BS.Castling = 0;
+    BS.ActiveColor = WHITE;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // No rights -> nothing.
+    if (result != 0)
+        fprintf(stderr, "FAIL %s: expected none, got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == 0;
+}
+
+static bool test_bbGenCastling_blackKingSide(void) {
+    BitboardState BS = {0};
+    BS.Pieces[BLACK][KING] = bb_Square(60);  // e8 (home)
+    BS.Pieces[BLACK][ROOK] = bb_Square(63);  // h8
+    bb_updateOccupancy(&BS);
+    BS.Castling = BB_CASTLE_BK;
+    BS.ActiveColor = BLACK;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // f8 (61) and g8 (62) empty -> king to g8 (62).
+    if (result != bb_Square(62))
+        fprintf(stderr, "FAIL %s: expected g8(62), got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == bb_Square(62);
+}
+
+static bool test_bbGenCastling_kingNotHome(void) {
+    BitboardState BS = {0};
+    BS.Pieces[WHITE][KING] = bb_Square(3);   // d1, not the e1 home square
+    BS.Pieces[WHITE][ROOK] = bb_Square(7);
+    bb_updateOccupancy(&BS);
+    BS.Castling = BB_CASTLE_WK;
+    BS.ActiveColor = WHITE;
+    Bitboard result = bb_genCastlingMoves(&BS);
+    // King is not on its home square -> no castling.
+    if (result != 0)
+        fprintf(stderr, "FAIL %s: expected none, got 0x%llx\n", __func__, (unsigned long long)result);
+    return result == 0;
+}
+
+static bool test_bbGenCastling_matchesOracle(void) {
+    bool Success = true;
+    for (int i = 0; i < 5; ++i) {
+        BitboardState BS = {0};
+        if (i == 0) {                 // both rights, all squares open
+            BS.Pieces[WHITE][KING] = bb_Square(4);
+            BS.Pieces[WHITE][ROOK] = bb_Square(0) | bb_Square(7);
+            BS.Castling = BB_CASTLE_WK | BB_CASTLE_WQ;
+            BS.ActiveColor = WHITE;
+        } else if (i == 1) {         // king-side only, open
+            BS.Pieces[WHITE][KING] = bb_Square(4);
+            BS.Pieces[WHITE][ROOK] = bb_Square(7);
+            BS.Castling = BB_CASTLE_WK;
+            BS.ActiveColor = WHITE;
+        } else if (i == 2) {         // queen-side only, open
+            BS.Pieces[WHITE][KING] = bb_Square(4);
+            BS.Pieces[WHITE][ROOK] = bb_Square(0);
+            BS.Castling = BB_CASTLE_WQ;
+            BS.ActiveColor = WHITE;
+        } else if (i == 3) {         // black, both sides, open
+            BS.Pieces[BLACK][KING] = bb_Square(60);
+            BS.Pieces[BLACK][ROOK] = bb_Square(56) | bb_Square(63);
+            BS.Castling = BB_CASTLE_BK | BB_CASTLE_BQ;
+            BS.ActiveColor = BLACK;
+        } else {                     // both rights, king-side blocked on f1
+            BS.Pieces[WHITE][KING] = bb_Square(4);
+            BS.Pieces[WHITE][ROOK] = bb_Square(0) | bb_Square(7);
+            BS.Pieces[BLACK][PAWN] = bb_Square(5);
+            BS.Castling = BB_CASTLE_WK | BB_CASTLE_WQ;
+            BS.ActiveColor = WHITE;
+        }
+        bb_updateOccupancy(&BS);
+        Success &= bb_genCastlingMoves(&BS) == t_expectedCastling(&BS);
+    }
+    if (!Success)
+        fprintf(stderr, "FAIL %s: impl != oracle on a case\n", __func__);
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3749,6 +3898,7 @@ extern Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard
 extern Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB, Color color, int enPassant);
+extern Bitboard bb_genCastlingMoves(BitboardState *s);
 
 int main() {
     bool Success = true;
@@ -3958,6 +4108,13 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenPawn_promotion();
     Success &= test_bbGenPawn_black();
     Success &= test_bbGenPawn_matchesOracle();
+    Success &= test_bbGenCastling_whiteKingSide();
+    Success &= test_bbGenCastling_whiteQueenSide();
+    Success &= test_bbGenCastling_blockedKingSide();
+    Success &= test_bbGenCastling_noRights();
+    Success &= test_bbGenCastling_blackKingSide();
+    Success &= test_bbGenCastling_kingNotHome();
+    Success &= test_bbGenCastling_matchesOracle();
     assert(Success);
 
     return !Success;

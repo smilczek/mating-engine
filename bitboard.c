@@ -784,6 +784,46 @@ Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB,
     return result;
 }
 
+// bb_genCastlingMoves returns the active color's king castling-destination
+// squares (g1/c1 or g8/c8).  Castling is offered when the side still has the
+// right, the king is on its home square (e1/e8) and the squares between the
+// king and rook are empty:  king-side needs files 5 and 6 empty, queen-side
+// needs files 1, 2 and 3.  The "king not in/through/into check" rule is applied
+// later by bb_filterLegalMoves (mirrors chess.c's "simple check").
+Bitboard bb_genCastlingMoves(BitboardState *s) {
+    Color color = s->ActiveColor;
+    int rank = (color == WHITE) ? 0 : 7;
+    int home = rank * 8 + 4;
+
+    // The king must be on its home square for castling to be offered.
+    if (!(s->Pieces[color][KING] & bb_Square(home))) {
+        return 0;
+    }
+
+    int wk = (color == WHITE) ? BB_CASTLE_WK : BB_CASTLE_BK;
+    int wq = (color == WHITE) ? BB_CASTLE_WQ : BB_CASTLE_BQ;
+    Bitboard result = 0;
+
+    // King-side: king (file 4) to file 6; files 5 and 6 must be empty.
+    if (s->Castling & wk) {
+        Bitboard between = bb_Square(rank * 8 + 5) | bb_Square(rank * 8 + 6);
+        if (!(s->AllPieces & between)) {
+            result |= bb_Square(rank * 8 + 6);
+        }
+    }
+
+    // Queen-side: king (file 4) to file 2; files 1, 2 and 3 must be empty.
+    if (s->Castling & wq) {
+        Bitboard between = bb_Square(rank * 8 + 1) | bb_Square(rank * 8 + 2) |
+                           bb_Square(rank * 8 + 3);
+        if (!(s->AllPieces & between)) {
+            result |= bb_Square(rank * 8 + 2);
+        }
+    }
+
+    return result;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;
