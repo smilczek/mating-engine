@@ -686,6 +686,27 @@ Bitboard bb_genBishopMoves(Bitboard bishopBB, Bitboard allOccBB, Bitboard enemyB
     return result;
 }
 
+// bb_genRookMoves is the rook analogue of bb_genBishopMoves: for each rook in
+// rookBB, bb_rookAttacks gives the empty squares it slides through plus the first
+// occupied square in each of its four orthogonal rays; friendly squares are
+// excluded. Captures are `result & enemyBB`, quiet moves `result & ~enemyBB`.
+//
+//   rookBB   : bitboard of the rooks (the "from" squares).
+//   allOccBB : all occupied squares (both colors) — stops the slide.
+//   enemyBB  : enemy pieces (marks which result squares are captures).
+
+Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard enemyBB) {
+    // Friendly = occupied squares that are not enemy squares.
+    Bitboard friendlyBB = allOccBB & ~enemyBB;
+    Bitboard froms = rookBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        result |= (bb_rookAttacks(from, allOccBB) & ~friendlyBB);
+    }
+    return result;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

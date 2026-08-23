@@ -63,7 +63,7 @@
 [x] 28. Implement `bb_genKnightMoves(pieceBB, enemyBB)` — all knight moves via bitboard ops
 [x] 29. Implement `bb_genKingMoves(kingSq, friendlyBB, enemyBB)` — all king moves
 [x] 30. Implement `bb_genBishopMoves(bishopBB, allOccBB, enemyBB)` — sliding moves with captures separated
-[ ] 31. Implement `bb_genRookMoves(rookBB, allOccBB, enemyBB)` — sliding moves with captures separated
+[x] 31. Implement `bb_genRookMoves(rookBB, allOccBB, enemyBB)` — sliding moves with captures separated
 [ ] 32. Implement `bb_genQueenMoves(queenBB, allOccBB, enemyBB)` — combined sliding
 [ ] 33. Implement `bb_genPawnMoves(pawnBB, enemyBB, allOccBB)` — pushes, captures, promotions, en passant
 [ ] 34. Implement `bb_genCastlingMoves()` — king-side and queen-side castling
