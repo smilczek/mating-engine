@@ -2874,8 +2874,150 @@ static bool test_bbInitMagics_populatesAllTables() {
     return Success;
 }
 
+// --- Oracle for the BB_Line geometry table (independent of bitboard.c) ---
+// Line families: 0=rank, 1=file, 2=diag "/" (rank-file const),
+// 3=diag "\" (rank+file const).
+static int t_lineKey(int sq, int axis) {
+    switch (axis) {
+        case 0: return sq / 8;
+        case 1: return sq % 8;
+        case 2: return (sq / 8) - (sq % 8);
+        default: return (sq / 8) + (sq % 8);
+    }
+}
+static int t_lineCoord(int sq, int axis) {
+    // A monotonic coordinate along the line for each family.
+    switch (axis) {
+        case 0: return sq % 8;            // along a rank: the file
+        case 1: return sq / 8;            // along a file: the rank
+        case 2: return sq / 8;            // along a "/" diagonal: the rank
+        default: return sq / 8;           // along a "\" diagonal: the rank
+    }
+}
+// Expected BB_Line[a][b]: squares on the segment a..b inclusive, for collinear
+// a,b; the square itself when a==b; empty when a,b are not collinear.
+static Bitboard t_expectedLine(int a, int b) {
+    if (a == b) {
+        return bb_Square(a);
+    }
+    for (int axis = 0; axis < 4; ++axis) {
+        if (t_lineKey(a, axis) != t_lineKey(b, axis)) continue;
+        int ca = t_lineCoord(a, axis);
+        int cb = t_lineCoord(b, axis);
+        int lo = ca < cb ? ca : cb;
+        int hi = ca < cb ? cb : ca;
+        Bitboard line = 0;
+        for (int s = 0; s < 64; ++s) {
+            if (t_lineKey(s, axis) != t_lineKey(a, axis)) continue;
+            int c = t_lineCoord(s, axis);
+            if (c >= lo && c <= hi) {
+                line |= bb_Square(s);
+            }
+        }
+        return line;
+    }
+    return 0;
+}
+
+static Bitboard t_diagA1H8() {
+    return bb_Square(0) | bb_Square(9) | bb_Square(18) | bb_Square(27) |
+        bb_Square(36) | bb_Square(45) | bb_Square(54) | bb_Square(63);
+}
+
+static bool test_bbLine_mainDiagonal() {
+    bool Success = true;
+    // a1(0) .. h8(63): the full main diagonal.
+    Success &= BB_Line[0][63] == t_diagA1H8();
+    // a1 .. c3: just the leading corner of the diagonal.
+    Success &= BB_Line[0][18] == (bb_Square(0) | bb_Square(9) | bb_Square(18));
+    return Success;
+}
+
+static bool test_bbLine_rank() {
+    bool Success = true;
+    // Rank 1: a1(0)..h1(7).
+    Bitboard rank1 = 0;
+    for (int f = 0; f < 8; ++f) rank1 |= bb_Square(f);
+    Success &= BB_Line[0][7] == rank1;
+    // a1 .. c1.
+    Success &= BB_Line[0][2] == (bb_Square(0) | bb_Square(1) | bb_Square(2));
+    return Success;
+}
+
+static bool test_bbLine_file() {
+    bool Success = true;
+    // File a: a1(0)..a8(56).
+    Bitboard fileA = 0;
+    for (int r = 0; r < 8; ++r) fileA |= bb_Square(r * 8);
+    Success &= BB_Line[0][56] == fileA;
+    // a1 .. a5.
+    Success &= BB_Line[0][32] == (bb_Square(0) | bb_Square(8) | bb_Square(16) |
+        bb_Square(24) | bb_Square(32));
+    return Success;
+}
+
+static bool test_bbLine_antiDiagonal() {
+    bool Success = true;
+    // "/" diagonal a8(56) .. h1(7): rank+file == 7.
+    Bitboard ad = 0;
+    for (int s = 0; s < 64; ++s) {
+        if ((s / 8) + (s % 8) == 7) ad |= bb_Square(s);
+    }
+    Success &= BB_Line[56][7] == ad;
+    return Success;
+}
+
+static bool test_bbLine_notCollinear() {
+    bool Success = true;
+    // a1(0) and b3(10): share no rank, file or diagonal.
+    Success &= BB_Line[0][10] == 0;
+    // e4(27) and b1(10): not collinear either.
+    Success &= BB_Line[27][10] == 0;
+    return Success;
+}
+
+static bool test_bbLine_sameSquare() {
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= BB_Line[sq][sq] == bb_Square(sq);
+    }
+    return Success;
+}
+
+static bool test_bbLine_includesEndpoints() {
+    bool Success = true;
+    int pairs[][2] = {{0, 63}, {0, 7}, {0, 56}, {56, 7}, {27, 0}, {27, 63}};
+    for (int i = 0; i < 6; ++i) {
+        int a = pairs[i][0], b = pairs[i][1];
+        Success &= (BB_Line[a][b] & bb_Square(a)) != 0;
+        Success &= (BB_Line[a][b] & bb_Square(b)) != 0;
+    }
+    return Success;
+}
+
+static bool test_bbLine_symmetry() {
+    bool Success = true;
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            Success &= BB_Line[a][b] == BB_Line[b][a];
+        }
+    }
+    return Success;
+}
+
+static bool test_bbLine_matchesOracle() {
+    bool Success = true;
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            Success &= BB_Line[a][b] == t_expectedLine(a, b);
+        }
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
+extern void bb_initLine(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 
@@ -2884,6 +3026,7 @@ int main() {
 
     bb_initPseudoAttacks();
     bb_initMagics();
+    bb_initLine();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -3022,6 +3165,15 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbRookMagic_noSelf();
     Success &= test_bbRookMagic_matchesNaive();
     Success &= test_bbInitMagics_populatesAllTables();
+    Success &= test_bbLine_mainDiagonal();
+    Success &= test_bbLine_rank();
+    Success &= test_bbLine_file();
+    Success &= test_bbLine_antiDiagonal();
+    Success &= test_bbLine_notCollinear();
+    Success &= test_bbLine_sameSquare();
+    Success &= test_bbLine_includesEndpoints();
+    Success &= test_bbLine_symmetry();
+    Success &= test_bbLine_matchesOracle();
     assert(Success);
 
     return !Success;

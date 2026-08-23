@@ -503,6 +503,66 @@ void bb_initPseudoAttacks(void) {
     }
 }
 
+// --- Geometry table: BB_Line ---
+//
+// BB_Line[s1][s2] holds every square on the line segment between s1 and s2
+// (rank, file or diagonal), INCLUDING s1 and s2. If s1 and s2 share no rank,
+// file or diagonal the entry is empty; for s1 == s2 it is just that square.
+// BB_Between (strictly between) is this line minus the endpoints, built
+// separately.
+
+static Bitboard BB_Line[64][64];
+
+// Line family: 0=rank, 1=file, 2=diag "/" (rank-file const),
+// 3=diag "\" (rank+file const).
+static int bb_lineKey(int sq, int axis) {
+    switch (axis) {
+        case 0: return sq / 8;
+        case 1: return sq % 8;
+        case 2: return (sq / 8) - (sq % 8);
+        default: return (sq / 8) + (sq % 8);
+    }
+}
+
+// A monotonic coordinate along the line for each family.
+static int bb_lineCoord(int sq, int axis) {
+    switch (axis) {
+        case 0: return sq % 8;            // along a rank: the file
+        case 1: return sq / 8;            // along a file: the rank
+        case 2: return sq / 8;            // along a "/" diagonal: the rank
+        default: return sq / 8;           // along a "\" diagonal: the rank
+    }
+}
+
+void bb_initLine(void) {
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            if (a == b) {
+                BB_Line[a][b] = bb_Square(a);
+                continue;
+            }
+            Bitboard line = 0;
+            for (int axis = 0; axis < 4; ++axis) {
+                // Two distinct squares share at most one line family.
+                if (bb_lineKey(a, axis) != bb_lineKey(b, axis)) continue;
+                int ca = bb_lineCoord(a, axis);
+                int cb = bb_lineCoord(b, axis);
+                int lo = ca < cb ? ca : cb;
+                int hi = ca < cb ? cb : ca;
+                for (int s = 0; s < 64; ++s) {
+                    if (bb_lineKey(s, axis) != bb_lineKey(a, axis)) continue;
+                    int c = bb_lineCoord(s, axis);
+                    if (c >= lo && c <= hi) {
+                        line |= bb_Square(s);
+                    }
+                }
+                break; // found the shared family
+            }
+            BB_Line[a][b] = line;
+        }
+    }
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

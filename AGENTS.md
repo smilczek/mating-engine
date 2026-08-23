@@ -55,7 +55,7 @@
 [x] 24. Write `bb_initMagics()` — runtime initialization of magic bitboard lookup tables
 
 ## Geometry Tables
-[ ] 25. Build `BB_Line[64][64]` — squares on the line between two squares (rank/file/diag)
+[x] 25. Build `BB_Line[64][64]` — squares on the line between two squares (rank/file/diag)
 [ ] 26. Build `BB_Between[64][64]` — squares strictly between two squares
 [ ] 27. Build `BB_RayPass[64][64]` — squares beyond s2 going from s1
 
