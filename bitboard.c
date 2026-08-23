@@ -580,6 +580,42 @@ void bb_initBetween(void) {
     }
 }
 
+// --- Geometry table: BB_RayPass ---
+//
+// BB_RayPass[s1][s2] holds the squares on the line beyond s2 when travelling
+// from s1, i.e. the part of the full rank/file/diagonal line that lies on the
+// far side of s2 in the s1 -> s2 direction. It is directional
+// (RayPass[a][b] != RayPass[b][a] in general), empty for s1 == s2 or
+// non-collinear pairs, and empty when s2 is the far edge of the line.
+
+static Bitboard BB_RayPass[64][64];
+
+void bb_initRayPass(void) {
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            if (a == b) {
+                BB_RayPass[a][b] = 0;
+                continue;
+            }
+            Bitboard ray = 0;
+            for (int axis = 0; axis < 4; ++axis) {
+                // Two distinct squares share at most one line family.
+                if (bb_lineKey(a, axis) != bb_lineKey(b, axis)) continue;
+                int ca = bb_lineCoord(a, axis);
+                int cb = bb_lineCoord(b, axis);
+                for (int s = 0; s < 64; ++s) {
+                    if (bb_lineKey(s, axis) != bb_lineKey(a, axis)) continue;
+                    int c = bb_lineCoord(s, axis);
+                    if (cb > ca && c > cb) ray |= bb_Square(s);
+                    else if (cb < ca && c < cb) ray |= bb_Square(s);
+                }
+                break; // found the shared family
+            }
+            BB_RayPass[a][b] = ray;
+        }
+    }
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

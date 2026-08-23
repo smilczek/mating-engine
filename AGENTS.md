@@ -57,7 +57,7 @@
 ## Geometry Tables
 [x] 25. Build `BB_Line[64][64]` — squares on the line between two squares (rank/file/diag)
 [x] 26. Build `BB_Between[64][64]` — squares strictly between two squares
-[ ] 27. Build `BB_RayPass[64][64]` — squares beyond s2 going from s1
+[x] 27. Build `BB_RayPass[64][64]` — squares beyond s2 going from s1
 
 ## Move Generation
 [ ] 28. Implement `bb_genKnightMoves(pieceBB, enemyBB)` — all knight moves via bitboard ops

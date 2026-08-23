@@ -3096,10 +3096,88 @@ static bool test_bbBetween_matchesOracle() {
     return Success;
 }
 
+// Independent oracle for "ray pass": starting at a, travel along the shared
+// line towards b and collect the squares that lie strictly BEYOND b. 0 if
+// a==b, the two squares are not collinear, or b is at the far edge.
+static Bitboard t_expectedRayPass(int a, int b) {
+    if (a == b) return 0;
+    for (int axis = 0; axis < 4; ++axis) {
+        if (t_lineKey(a, axis) != t_lineKey(b, axis)) continue;
+        int ca = t_lineCoord(a, axis);
+        int cb = t_lineCoord(b, axis);
+        if (ca == cb) continue;
+        Bitboard ray = 0;
+        for (int s = 0; s < 64; ++s) {
+            if (t_lineKey(s, axis) != t_lineKey(a, axis)) continue;
+            int c = t_lineCoord(s, axis);
+            if (cb > ca && c > cb) ray |= bb_Square(s);
+            else if (cb < ca && c < cb) ray |= bb_Square(s);
+        }
+        return ray;
+    }
+    return 0;
+}
+
+static bool test_bbRayPass_beyondDiagonal() {
+    // a1 through c3 keeps going to d4,e5,f6,g7,h8.
+    Bitboard expected = bb_Square(27) | bb_Square(36) | bb_Square(45)
+                      | bb_Square(54) | bb_Square(63);
+    bool Success = BB_RayPass[0][18] == expected;
+    // a1 through h8 reaches the edge, nothing beyond.
+    Success &= BB_RayPass[0][63] == 0;
+    return Success;
+}
+
+static bool test_bbRayPass_beyondRank() {
+    // a1 through c1 keeps going to d1,e1,f1,g1,h1.
+    Bitboard expected = bb_Square(3) | bb_Square(4) | bb_Square(5)
+                      | bb_Square(6) | bb_Square(7);
+    return BB_RayPass[0][2] == expected;
+}
+
+static bool test_bbRayPass_edgeIsEmpty() {
+    // b2 is the far edge of the rank/file, so nothing passes beyond it.
+    bool Success = BB_RayPass[0][7] == 0;   // a1 -> h1
+    Success &= BB_RayPass[0][56] == 0;      // a1 -> a8
+    return Success;
+}
+
+static bool test_bbRayPass_notCollinear() {
+    return BB_RayPass[0][10] == 0;  // a1,b3: no shared rank/file/diagonal
+}
+
+static bool test_bbRayPass_sameSquare() {
+    for (int sq = 0; sq < 64; ++sq) {
+        if (BB_RayPass[sq][sq] != 0) return false;
+    }
+    return true;
+}
+
+static bool test_bbRayPass_directional() {
+    // RayPass is not symmetric: a3->c3 sees d3..h3, but c3->a3 sees nothing
+    // (a3 is the edge).
+    Bitboard expected = bb_Square(19) | bb_Square(20) | bb_Square(21)
+                      | bb_Square(22) | bb_Square(23);
+    bool Success = BB_RayPass[16][18] == expected;
+    Success &= BB_RayPass[18][16] == 0;
+    return Success;
+}
+
+static bool test_bbRayPass_matchesOracle() {
+    bool Success = true;
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            Success &= BB_RayPass[a][b] == t_expectedRayPass(a, b);
+        }
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
 extern void bb_initBetween(void);
+extern void bb_initRayPass(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 
@@ -3110,6 +3188,7 @@ int main() {
     bb_initMagics();
     bb_initLine();
     bb_initBetween();
+    bb_initRayPass();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -3264,6 +3343,13 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbBetween_sameSquare();
     Success &= test_bbBetween_symmetry();
     Success &= test_bbBetween_matchesOracle();
+    Success &= test_bbRayPass_beyondDiagonal();
+    Success &= test_bbRayPass_beyondRank();
+    Success &= test_bbRayPass_edgeIsEmpty();
+    Success &= test_bbRayPass_notCollinear();
+    Success &= test_bbRayPass_sameSquare();
+    Success &= test_bbRayPass_directional();
+    Success &= test_bbRayPass_matchesOracle();
     assert(Success);
 
     return !Success;
