@@ -563,6 +563,23 @@ void bb_initLine(void) {
     }
 }
 
+// --- Geometry table: BB_Between ---
+//
+// BB_Between[s1][s2] holds the squares STRICTLY between s1 and s2 on a shared
+// rank, file or diagonal (the endpoints s1 and s2 are excluded). It is derived
+// directly from BB_Line by removing the two endpoints, so bb_initLine() must
+// run first. Empty when s1 == s2 or the two squares are not collinear.
+
+static Bitboard BB_Between[64][64];
+
+void bb_initBetween(void) {
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            BB_Between[a][b] = BB_Line[a][b] & ~(bb_Square(a) | bb_Square(b));
+        }
+    }
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

@@ -3015,9 +3015,91 @@ static bool test_bbLine_matchesOracle() {
     return Success;
 }
 
+// Independent oracle for "strictly between": squares on the shared line that
+// fall strictly between a and b (endpoints excluded), or 0 if a==b or the two
+// squares are not collinear.
+static Bitboard t_expectedBetween(int a, int b) {
+    if (a == b) return 0;
+    for (int axis = 0; axis < 4; ++axis) {
+        if (t_lineKey(a, axis) != t_lineKey(b, axis)) continue;
+        int ca = t_lineCoord(a, axis);
+        int cb = t_lineCoord(b, axis);
+        if (ca == cb) continue;
+        int lo = ca < cb ? ca : cb;
+        int hi = ca < cb ? cb : ca;
+        Bitboard between = 0;
+        for (int s = 0; s < 64; ++s) {
+            if (t_lineKey(s, axis) != t_lineKey(a, axis)) continue;
+            int c = t_lineCoord(s, axis);
+            if (c > lo && c < hi) between |= bb_Square(s);
+        }
+        return between;
+    }
+    return 0;
+}
+
+static bool test_bbBetween_stripsEndpoints() {
+    // BB_Between is, by construction, BB_Line minus the two endpoints.
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            Bitboard expected = BB_Line[a][b] & ~(bb_Square(a) | bb_Square(b));
+            if (BB_Between[a][b] != expected) return false;
+        }
+    }
+    return true;
+}
+
+static bool test_bbBetween_diagonal() {
+    // a1..h8 minus a1 and h8 == b2,c3,d4,e5,f6,g7.
+    Bitboard expected = bb_Square(9) | bb_Square(18) | bb_Square(27)
+                      | bb_Square(36) | bb_Square(45) | bb_Square(54);
+    bool Success = BB_Between[0][63] == expected;
+    // a1..c3 strictly between == just b2.
+    Success &= BB_Between[0][18] == bb_Square(9);
+    return Success;
+}
+
+static bool test_bbBetween_adjacent() {
+    // Two neighbouring squares have nothing strictly between them.
+    bool Success = BB_Between[0][1] == 0;  // a1..b1 on the rank
+    Success &= BB_Between[0][8] == 0;      // a1..a2 on the file
+    return Success;
+}
+
+static bool test_bbBetween_notCollinear() {
+    return BB_Between[0][10] == 0;  // a1,b3: no shared rank/file/diagonal
+}
+
+static bool test_bbBetween_sameSquare() {
+    for (int sq = 0; sq < 64; ++sq) {
+        if (BB_Between[sq][sq] != 0) return false;
+    }
+    return true;
+}
+
+static bool test_bbBetween_symmetry() {
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            if (BB_Between[a][b] != BB_Between[b][a]) return false;
+        }
+    }
+    return true;
+}
+
+static bool test_bbBetween_matchesOracle() {
+    bool Success = true;
+    for (int a = 0; a < 64; ++a) {
+        for (int b = 0; b < 64; ++b) {
+            Success &= BB_Between[a][b] == t_expectedBetween(a, b);
+        }
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
+extern void bb_initBetween(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 
@@ -3027,6 +3109,7 @@ int main() {
     bb_initPseudoAttacks();
     bb_initMagics();
     bb_initLine();
+    bb_initBetween();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -3174,6 +3257,13 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbLine_includesEndpoints();
     Success &= test_bbLine_symmetry();
     Success &= test_bbLine_matchesOracle();
+    Success &= test_bbBetween_stripsEndpoints();
+    Success &= test_bbBetween_diagonal();
+    Success &= test_bbBetween_adjacent();
+    Success &= test_bbBetween_notCollinear();
+    Success &= test_bbBetween_sameSquare();
+    Success &= test_bbBetween_symmetry();
+    Success &= test_bbBetween_matchesOracle();
     assert(Success);
 
     return !Success;
