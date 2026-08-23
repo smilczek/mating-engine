@@ -2663,12 +2663,105 @@ static bool test_bbSlidingQueen_subsetOfMaxCoverage() {
     return Success;
 }
 
+static bool test_bbBishopMagic_allSquaresHaveMagic() {
+    bool Success = true;
+
+    // A bishop is always on at least one diagonal, so every square gets a real
+    // (non-zero) magic number.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= BB_MagicBishop[sq] != 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbBishopRelOcc_isRayCoverage() {
+    bool Success = true;
+
+    // For a bishop the relevant occupancy is exactly its full ray coverage.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= BB_RelativeOcc_Bishop[sq] == BB_PseudoAttacks_Bishop[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbBishopMagic_maxRelevantBits() {
+    bool Success = true;
+
+    // The lookup table is 2^13; no square may need more relevant bits than that.
+    for (int sq = 0; sq < 64; ++sq) {
+        int k = bb_popcount(BB_RelativeOcc_Bishop[sq]);
+        Success &= k <= 13;
+    }
+
+    return Success;
+}
+
+static bool test_bbBishopMagic_emptyBoardMatchesMax() {
+    bool Success = true;
+
+    // No relevant occupancy -> full diagonal ray coverage, same as the naive
+    // sliding attack on an empty board.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= bb_bishopAttacks(sq, 0ULL) == BB_PseudoAttacks_Bishop[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbBishopMagic_noSelf() {
+    bool Success = true;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard self = ((Bitboard)1 << sq);
+        Bitboard occs[] = {0ULL, 0xFFFFFFFFFFFFFFFFULL, self};
+        for (int i = 0; i < 3; ++i) {
+            Success &= (bb_bishopAttacks(sq, occs[i]) & self) == 0ULL;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbBishopMagic_matchesNaive() {
+    bool Success = true;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard full = 0xFFFFFFFFFFFFFFFFULL;
+
+        // Empty and fully-occupied boards.
+        Success &= bb_bishopAttacks(sq, 0ULL) == bb_slidingAttack_bishop(sq, 0ULL);
+        Success &= bb_bishopAttacks(sq, full) == bb_slidingAttack_bishop(sq, full);
+
+        // Every single-square occupant.
+        for (int i = 0; i < 64; ++i) {
+            Bitboard occ = ((Bitboard)1 << i);
+            Success &= bb_bishopAttacks(sq, occ) == bb_slidingAttack_bishop(sq, occ);
+        }
+
+        // A spread of multi-bit occupancies (deterministic submasks of relOcc),
+        // exercising the higher-index entries of the lookup table.
+        for (int j = 0; j < 16; ++j) {
+            Bitboard occ = ((Bitboard)sq * 2654435761ULL + (Bitboard)j * 40503ULL + 12345ULL)
+                * 6364136223846793005ULL + 1442695040888963407ULL;
+            occ &= BB_RelativeOcc_Bishop[sq];
+            Success &= bb_bishopAttacks(sq, occ) == bb_slidingAttack_bishop(sq, occ);
+        }
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
+extern void bb_initMagics_bishop(void);
+extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 
 int main() {
     bool Success = true;
 
     bb_initPseudoAttacks();
+    bb_initMagics_bishop();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -2794,6 +2887,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbSlidingQueen_equalsUnionWithOccupancy();
     Success &= test_bbSlidingQueen_noSelf();
     Success &= test_bbSlidingQueen_subsetOfMaxCoverage();
+    Success &= test_bbBishopMagic_allSquaresHaveMagic();
+    Success &= test_bbBishopRelOcc_isRayCoverage();
+    Success &= test_bbBishopMagic_maxRelevantBits();
+    Success &= test_bbBishopMagic_emptyBoardMatchesMax();
+    Success &= test_bbBishopMagic_noSelf();
+    Success &= test_bbBishopMagic_matchesNaive();
     assert(Success);
 
     return !Success;

@@ -610,3 +610,95 @@ void bb_printBoard(BitboardState *s) {
     printf(", EP: %s", s->EnPassant >= 0 ? "yes" : "no");
     printf(", HM: %u, FM: %u\n", s->HalfmoveClock, s->FullmoveNumber);
 }
+
+// --- Magic bitboard tables for bishop attacks ---
+//
+// A bishop's relevant occupancy is its full diagonal ray coverage. For each
+// square a 64-bit "magic" number maps every relevant occupancy to an index via
+//   index = (relOcc * magic) >> (64 - k)
+// where k is the (fixed) number of relevant bits; the index then indexes a
+// per-square table holding the correct attack bitboard. The max k for a bishop
+// is 13, so each table has 1 << 13 = 8192 entries.
+//
+// The magic numbers are found once offline by the "few-bits" search (Tord
+// Romstad): try sparse candidates (bitwise AND of several randoms) and keep the
+// first for which the index is a function of the attack. They are baked here so
+// the table is built deterministically at init with no runtime search. Every
+// square has a non-zero magic (a bishop always has at least one diagonal).
+
+#define BB_BISHOP_MAGIC_TABLE_SIZE 8192
+
+static const Bitboard BB_MagicBishop_init[64] = {
+    0x4004042822042204ULL, 0x2000880104002002ULL, 0x040c002402100001ULL,
+    0x0838012830000000ULL, 0x8004010800001202ULL, 0x00120201a0010401ULL,
+    0x4000141004100000ULL, 0x0080c64128044000ULL, 0x0208102044410044ULL,
+    0x0000013400820006ULL, 0x00001400802c0430ULL, 0x000000c040400000ULL,
+    0x8000140414010004ULL, 0x0001020010050800ULL, 0x0000209801040200ULL,
+    0x8a10200841041000ULL, 0x4a02000490204800ULL, 0x0000224450010048ULL,
+    0x000080040444200aULL, 0x800020805a000100ULL, 0x4400104101008000ULL,
+    0x0081001044000900ULL, 0x0000102008001110ULL, 0x0012000021012800ULL,
+    0xc001081040024340ULL, 0x000c008004060080ULL, 0x8000080410024a40ULL,
+    0x000005021a710200ULL, 0x0801100240440400ULL, 0x0002001804040080ULL,
+    0x8004012828405a00ULL, 0x0000808000082800ULL, 0x0010042102040080ULL,
+    0x0000428201006a40ULL, 0x0284000a21040400ULL, 0x4400008003008200ULL,
+    0x0030000200010101ULL, 0x900108002204d000ULL, 0x0002050010002200ULL,
+    0x2404340010534140ULL, 0x0000210410306000ULL, 0x0000080040a00802ULL,
+    0x4600860800100200ULL, 0x4018208810400400ULL, 0x4124018210010040ULL,
+    0x1210600060808300ULL, 0x0004008019001010ULL, 0x8004040724080650ULL,
+    0x0002804104400200ULL, 0x5200090441002000ULL, 0x0080450408004400ULL,
+    0x2400000622021000ULL, 0x8001821c00408400ULL, 0x4488602002000820ULL,
+    0x0040010012008100ULL, 0x0010022841002004ULL, 0x200050420c442000ULL,
+    0x800c001088004800ULL, 0x0420000009004800ULL, 0x02d0080000485020ULL,
+    0xc004000202020202ULL, 0xc000080819818200ULL, 0x1408024730016600ULL,
+    0x000490420a040010ULL,
+};
+
+static Bitboard BB_MagicBishop[64];
+static Bitboard BB_RelativeOcc_Bishop[64];
+static Bitboard BB_BishopAttacks[64][BB_BISHOP_MAGIC_TABLE_SIZE];
+
+void bb_initMagics_bishop(void) {
+    for (int sq = 0; sq < 64; ++sq) {
+        // The relevant occupancy is the full ray coverage; copy the baked magic.
+        BB_MagicBishop[sq] = BB_MagicBishop_init[sq];
+        Bitboard relOcc = BB_PseudoAttacks_Bishop[sq];
+        BB_RelativeOcc_Bishop[sq] = relOcc;
+
+        int k = bb_popcount(relOcc);
+
+        // No diagonal squares: only the empty configuration exists, index 0.
+        if (k == 0) {
+            BB_BishopAttacks[sq][0] = bb_slidingAttack_bishop(sq, 0ULL);
+            continue;
+        }
+
+        // Fill the table by enumerating every relevant occupancy (submask of
+        // relOcc). A valid magic guarantees every occupancy of the same attack
+        // lands in the same entry, so a later write can never clobber a
+        // different attack.
+        int shift = 64 - k;
+        Bitboard sub = relOcc;
+        do {
+            unsigned int index = (unsigned int)((sub * BB_MagicBishop[sq]) >> shift);
+            BB_BishopAttacks[sq][index] = bb_slidingAttack_bishop(sq, sub);
+            if (sub == 0) break;
+            sub = (sub - 1) & relOcc;
+        } while (1);
+    }
+}
+
+Bitboard bb_bishopAttacks(int sq, Bitboard occupied) {
+    Bitboard relOcc = occupied & BB_RelativeOcc_Bishop[sq];
+
+    // k is the (fixed) number of relevant bits for the square, NOT the popcount
+    // of the masked occupancy: the index must use the same k the table was built
+    // with. k == 0 would shift by 64 (undefined behaviour), so the empty
+    // configuration always maps to index 0.
+    int k = bb_popcount(BB_RelativeOcc_Bishop[sq]);
+    if (k == 0) {
+        return BB_BishopAttacks[sq][0];
+    }
+
+    unsigned int index = (unsigned int)((relOcc * BB_MagicBishop[sq]) >> (64 - k));
+    return BB_BishopAttacks[sq][index];
+}
