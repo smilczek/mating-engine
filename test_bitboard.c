@@ -2753,15 +2753,110 @@ static bool test_bbBishopMagic_matchesNaive() {
     return Success;
 }
 
+static bool test_bbRookMagic_allSquaresHaveMagic() {
+    bool Success = true;
+
+    // A rook is always on at least one rank and one file, so every square gets
+    // a real (non-zero) magic number.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= BB_MagicRook[sq] != 0ULL;
+    }
+
+    return Success;
+}
+
+static bool test_bbRookRelOcc_isRayCoverage() {
+    bool Success = true;
+
+    // For a rook the relevant occupancy is exactly its full rank/file ray
+    // coverage.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= BB_RelativeOcc_Rook[sq] == BB_PseudoAttacks_Rook[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbRookMagic_maxRelevantBits() {
+    bool Success = true;
+
+    // A rook sees 7 squares on its rank + 7 on its file = 14 relevant bits,
+    // uniformly for every square; the table is 2^14.
+    for (int sq = 0; sq < 64; ++sq) {
+        int k = bb_popcount(BB_RelativeOcc_Rook[sq]);
+        Success &= k <= 14;
+    }
+
+    return Success;
+}
+
+static bool test_bbRookMagic_emptyBoardMatchesMax() {
+    bool Success = true;
+
+    // No relevant occupancy -> full rank/file ray coverage, same as the naive
+    // sliding attack on an empty board.
+    for (int sq = 0; sq < 64; ++sq) {
+        Success &= bb_rookAttacks(sq, 0ULL) == BB_PseudoAttacks_Rook[sq];
+    }
+
+    return Success;
+}
+
+static bool test_bbRookMagic_noSelf() {
+    bool Success = true;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard self = ((Bitboard)1 << sq);
+        Bitboard occs[] = {0ULL, 0xFFFFFFFFFFFFFFFFULL, self};
+        for (int i = 0; i < 3; ++i) {
+            Success &= (bb_rookAttacks(sq, occs[i]) & self) == 0ULL;
+        }
+    }
+
+    return Success;
+}
+
+static bool test_bbRookMagic_matchesNaive() {
+    bool Success = true;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard full = 0xFFFFFFFFFFFFFFFFULL;
+
+        // Empty and fully-occupied boards.
+        Success &= bb_rookAttacks(sq, 0ULL) == bb_slidingAttack_rook(sq, 0ULL);
+        Success &= bb_rookAttacks(sq, full) == bb_slidingAttack_rook(sq, full);
+
+        // Every single-square occupant.
+        for (int i = 0; i < 64; ++i) {
+            Bitboard occ = ((Bitboard)1 << i);
+            Success &= bb_rookAttacks(sq, occ) == bb_slidingAttack_rook(sq, occ);
+        }
+
+        // A spread of multi-bit occupancies (deterministic submasks of relOcc),
+        // exercising the higher-index entries of the lookup table.
+        for (int j = 0; j < 16; ++j) {
+            Bitboard occ = ((Bitboard)sq * 2654435761ULL + (Bitboard)j * 40503ULL + 12345ULL)
+                * 6364136223846793005ULL + 1442695040888963407ULL;
+            occ &= BB_RelativeOcc_Rook[sq];
+            Success &= bb_rookAttacks(sq, occ) == bb_slidingAttack_rook(sq, occ);
+        }
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics_bishop(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
+extern void bb_initMagics_rook(void);
+extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 
 int main() {
     bool Success = true;
 
     bb_initPseudoAttacks();
     bb_initMagics_bishop();
+    bb_initMagics_rook();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -2893,6 +2988,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbBishopMagic_emptyBoardMatchesMax();
     Success &= test_bbBishopMagic_noSelf();
     Success &= test_bbBishopMagic_matchesNaive();
+    Success &= test_bbRookMagic_allSquaresHaveMagic();
+    Success &= test_bbRookRelOcc_isRayCoverage();
+    Success &= test_bbRookMagic_maxRelevantBits();
+    Success &= test_bbRookMagic_emptyBoardMatchesMax();
+    Success &= test_bbRookMagic_noSelf();
+    Success &= test_bbRookMagic_matchesNaive();
     assert(Success);
 
     return !Success;

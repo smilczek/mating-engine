@@ -51,7 +51,7 @@
 [x] 20. Implement `bb_slidingAttack_rook(sq, occupied)` — naive iterative version first
 [x] 21. Implement `bb_slidingAttack_queen(sq, occupied)` — combine bishop + rook
 [x] 22. Implement magic bitboard tables for bishop attacks (`BB_MagicBishop[64]`)
-[ ] 23. Implement magic bitboard tables for rook attacks (`BB_MagicRook[64]`)
+[x] 23. Implement magic bitboard tables for rook attacks (`BB_MagicRook[64]`)
 [ ] 24. Write `bb_initMagics()` — runtime initialization of magic bitboard lookup tables
 
 ## Geometry Tables

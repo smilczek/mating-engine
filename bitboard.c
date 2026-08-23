@@ -702,3 +702,89 @@ Bitboard bb_bishopAttacks(int sq, Bitboard occupied) {
     unsigned int index = (unsigned int)((relOcc * BB_MagicBishop[sq]) >> (64 - k));
     return BB_BishopAttacks[sq][index];
 }
+
+// --- Magic bitboard tables for rook attacks ---
+//
+// A rook's relevant occupancy is its full rank/file ray coverage, which is 14
+// bits for every square (7 squares on the rank + 7 on the file), so each
+// per-square table has 1 << 14 = 16384 entries. The magic numbers are found once
+// offline by the "few-bits" search (Tord Romstad) and baked here; every square
+// has a non-zero magic.
+
+#define BB_ROOK_MAGIC_TABLE_SIZE 16384
+
+static const Bitboard BB_MagicRook_init[64] = {
+    0x2401801800148000ULL, 0x00200020480a4d00ULL, 0x4200021120054200ULL,
+    0x1000410010002080ULL, 0x0200014042100a00ULL, 0x0020004481001120ULL,
+    0x0380082201408100ULL, 0x400a128000204100ULL, 0x00013200d0941000ULL,
+    0x8000040024b10200ULL, 0x4040020006010400ULL, 0x0000100008820300ULL,
+    0x20000200c4080100ULL, 0x0000020020840040ULL, 0x4002000051084024ULL,
+    0x0000080880254100ULL, 0x0480040100214000ULL, 0x00200a0002001c80ULL,
+    0x00826060001c0100ULL, 0x800034040000b000ULL, 0x0000050020020100ULL,
+    0x6004020001008048ULL, 0x4000040008a21108ULL, 0x90000048a104000cULL,
+    0x2102000400204400ULL, 0x0000042400890800ULL, 0x1c24120002012000ULL,
+    0x0000204104000200ULL, 0x00408f0200004600ULL, 0x1021008002001040ULL,
+    0x2400002008014200ULL, 0x00000100c4080012ULL, 0x0000042800823000ULL,
+    0x0000020082004000ULL, 0x0000200a01000300ULL, 0x8018100008004080ULL,
+    0x0000068010002040ULL, 0x4000144081040002ULL, 0x0400002000844600ULL,
+    0x0800600851800040ULL, 0x0000802001000b00ULL, 0x0000048800100400ULL,
+    0x00000a100900b000ULL, 0x0000400800880020ULL, 0x8840024480090800ULL,
+    0x1880040020010410ULL, 0x4000020140440008ULL, 0x00000020000886e0ULL,
+    0x0002004081001200ULL, 0x0082100208220200ULL, 0x100a640200010600ULL,
+    0x4100024449008100ULL, 0x5000004d08840420ULL, 0x8400004024008100ULL,
+    0x00022401004c8200ULL, 0x0200003950021080ULL, 0x0000048010628442ULL,
+    0x000070203a000802ULL, 0x002001044062000aULL, 0x20000301000b9007ULL,
+    0x0000020004c88506ULL, 0x2000040040a18812ULL, 0x403308020240806cULL,
+    0x0000000841201082ULL,
+};
+
+static Bitboard BB_MagicRook[64];
+static Bitboard BB_RelativeOcc_Rook[64];
+static Bitboard BB_RookAttacks[64][BB_ROOK_MAGIC_TABLE_SIZE];
+
+void bb_initMagics_rook(void) {
+    for (int sq = 0; sq < 64; ++sq) {
+        // The relevant occupancy is the full rank/file ray coverage; copy the
+        // baked magic.
+        BB_MagicRook[sq] = BB_MagicRook_init[sq];
+        Bitboard relOcc = BB_PseudoAttacks_Rook[sq];
+        BB_RelativeOcc_Rook[sq] = relOcc;
+
+        int k = bb_popcount(relOcc);
+
+        // No rank/file squares: only the empty configuration exists, index 0.
+        if (k == 0) {
+            BB_RookAttacks[sq][0] = bb_slidingAttack_rook(sq, 0ULL);
+            continue;
+        }
+
+        // Fill the table by enumerating every relevant occupancy (submask of
+        // relOcc). A valid magic guarantees every occupancy of the same attack
+        // lands in the same entry, so a later write can never clobber a
+        // different attack.
+        int shift = 64 - k;
+        Bitboard sub = relOcc;
+        do {
+            unsigned int index = (unsigned int)((sub * BB_MagicRook[sq]) >> shift);
+            BB_RookAttacks[sq][index] = bb_slidingAttack_rook(sq, sub);
+            if (sub == 0) break;
+            sub = (sub - 1) & relOcc;
+        } while (1);
+    }
+}
+
+Bitboard bb_rookAttacks(int sq, Bitboard occupied) {
+    Bitboard relOcc = occupied & BB_RelativeOcc_Rook[sq];
+
+    // k is the (fixed) number of relevant bits for the square, NOT the popcount
+    // of the masked occupancy: the index must use the same k the table was built
+    // with. k == 0 would shift by 64 (undefined behaviour), so the empty
+    // configuration always maps to index 0.
+    int k = bb_popcount(BB_RelativeOcc_Rook[sq]);
+    if (k == 0) {
+        return BB_RookAttacks[sq][0];
+    }
+
+    unsigned int index = (unsigned int)((relOcc * BB_MagicRook[sq]) >> (64 - k));
+    return BB_RookAttacks[sq][index];
+}
