@@ -2845,18 +2845,45 @@ static bool test_bbRookMagic_matchesNaive() {
     return Success;
 }
 
+static bool test_bbInitMagics_populatesAllTables() {
+    // A single bb_initMagics() call must (re)initialise every magic table.
+    // Wipe the tables first so the test proves bb_initMagics repopulates them,
+    // rather than them being left populated by an earlier initialisation.
+    for (int sq = 0; sq < 64; ++sq) {
+        BB_MagicBishop[sq] = 0ULL;
+        BB_RelativeOcc_Bishop[sq] = 0ULL;
+        BB_MagicRook[sq] = 0ULL;
+        BB_RelativeOcc_Rook[sq] = 0ULL;
+    }
+
+    bb_initMagics();
+
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        // Magics repopulated to their baked values.
+        Success &= BB_MagicBishop[sq] == BB_MagicBishop_init[sq];
+        Success &= BB_MagicRook[sq] == BB_MagicRook_init[sq];
+        // Relative occupancy repopulated to the ray coverage.
+        Success &= BB_RelativeOcc_Bishop[sq] == BB_PseudoAttacks_Bishop[sq];
+        Success &= BB_RelativeOcc_Rook[sq] == BB_PseudoAttacks_Rook[sq];
+        // And the attacks are correct on an empty board.
+        Success &= bb_bishopAttacks(sq, 0ULL) == BB_PseudoAttacks_Bishop[sq];
+        Success &= bb_rookAttacks(sq, 0ULL) == BB_PseudoAttacks_Rook[sq];
+    }
+
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
-extern void bb_initMagics_bishop(void);
+extern void bb_initMagics(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
-extern void bb_initMagics_rook(void);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
 
 int main() {
     bool Success = true;
 
     bb_initPseudoAttacks();
-    bb_initMagics_bishop();
-    bb_initMagics_rook();
+    bb_initMagics();
 
 Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbPseudoAttacksKnight_center();
@@ -2994,6 +3021,7 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbRookMagic_emptyBoardMatchesMax();
     Success &= test_bbRookMagic_noSelf();
     Success &= test_bbRookMagic_matchesNaive();
+    Success &= test_bbInitMagics_populatesAllTables();
     assert(Success);
 
     return !Success;

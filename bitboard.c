@@ -657,7 +657,7 @@ static Bitboard BB_MagicBishop[64];
 static Bitboard BB_RelativeOcc_Bishop[64];
 static Bitboard BB_BishopAttacks[64][BB_BISHOP_MAGIC_TABLE_SIZE];
 
-void bb_initMagics_bishop(void) {
+static void bb_initMagics_bishop(void) {
     for (int sq = 0; sq < 64; ++sq) {
         // The relevant occupancy is the full ray coverage; copy the baked magic.
         BB_MagicBishop[sq] = BB_MagicBishop_init[sq];
@@ -742,7 +742,7 @@ static Bitboard BB_MagicRook[64];
 static Bitboard BB_RelativeOcc_Rook[64];
 static Bitboard BB_RookAttacks[64][BB_ROOK_MAGIC_TABLE_SIZE];
 
-void bb_initMagics_rook(void) {
+static void bb_initMagics_rook(void) {
     for (int sq = 0; sq < 64; ++sq) {
         // The relevant occupancy is the full rank/file ray coverage; copy the
         // baked magic.
@@ -787,4 +787,11 @@ Bitboard bb_rookAttacks(int sq, Bitboard occupied) {
 
     unsigned int index = (unsigned int)((relOcc * BB_MagicRook[sq]) >> (64 - k));
     return BB_RookAttacks[sq][index];
+}
+
+// Single entry point that initialises every magic bitboard lookup table. Mirrors
+// Stockfish's do_magics(); call this once at startup.
+void bb_initMagics(void) {
+    bb_initMagics_bishop();
+    bb_initMagics_rook();
 }
