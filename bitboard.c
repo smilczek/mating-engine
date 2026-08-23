@@ -616,6 +616,29 @@ void bb_initRayPass(void) {
     }
 }
 
+// --- Move generation (bitboard) ---
+//
+// bb_genKnightMoves returns the bitboard of every square the knights in
+// pieceBB can move to: a knight may move to any of its attack squares that is
+// not occupied by a friendly piece. Captures (moves onto enemyBB) and quiet
+// moves (onto empty squares) are both part of the result; the caller can
+// recover the capture subset as `result & enemyBB`.
+//
+//   pieceBB : bitboard of the knights (the "from" squares).
+//   enemyBB : bitboard of enemy pieces (marks which result squares are captures).
+
+Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB) {
+    (void) enemyBB;
+    Bitboard froms = pieceBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        // A knight may not land on a friendly square.
+        result |= BB_PseudoAttacks_Knight[from] & ~pieceBB;
+    }
+    return result;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

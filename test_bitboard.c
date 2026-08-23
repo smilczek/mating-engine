@@ -3173,6 +3173,99 @@ static bool test_bbRayPass_matchesOracle() {
     return Success;
 }
 
+// --- Knight move generation ---
+
+// Independent oracle: brute-force the knight's (rank,file) moves, excluding
+// friendly (pieceBB) destination squares. Deliberately does NOT consult
+// BB_PseudoAttacks_Knight so it is a genuine cross-check.
+static const int t_knightDf[8] = { 2, 2, -2, -2, 1, -1, 1, -1 };
+static const int t_knightDr[8] = { 1, -1, 1, -1, 2, 2, -2, -2 };
+
+static Bitboard t_expectedKnightMoves(Bitboard pieceBB, Bitboard enemyBB) {
+    (void) enemyBB;
+    Bitboard froms = pieceBB;
+    Bitboard result = 0;
+    while (froms) {
+        int from = bb_pop_lsb(&froms);
+        int fr = from / 8, ff = from % 8;
+        for (int i = 0; i < 8; ++i) {
+            int nr = fr + t_knightDr[i];
+            int nf = ff + t_knightDf[i];
+            if (nr < 0 || nr >= 8 || nf < 0 || nf >= 8) continue;
+            int to = nr * 8 + nf;
+            if (pieceBB & bb_Square(to)) continue; // friendly square
+            result |= bb_Square(to);
+        }
+    }
+    return result;
+}
+
+static bool test_bbGenKnight_center() {
+    // A lone knight on d4 reaches all 8 of its attack squares.
+    Bitboard result = bb_genKnightMoves(bb_Square(27), 0);
+    bool Success = result == BB_PseudoAttacks_Knight[27];
+    Success &= bb_popcount(result) == 8;
+    return Success;
+}
+
+static bool test_bbGenKnight_corner() {
+    // A lone knight on a1 reaches exactly c2 and b3.
+    Bitboard result = bb_genKnightMoves(bb_Square(0), 0);
+    bool Success = result == BB_PseudoAttacks_Knight[0];
+    Success &= bb_popcount(result) == 2;
+    return Success;
+}
+
+static bool test_bbGenKnight_capture() {
+    // An enemy on a square the knight attacks is still a legal destination.
+    Bitboard pieceBB = bb_Square(27);           // knight on d4
+    Bitboard enemyBB = bb_Square(17);           // enemy on b3 (d4 attacks it)
+    Bitboard result = bb_genKnightMoves(pieceBB, enemyBB);
+    bool Success = bb_popcount(result) == 8;    // one capture + 7 quiet
+    Success &= (result & enemyBB) == enemyBB;   // the capture is present
+    return Success;
+}
+
+static bool test_bbGenKnight_blocksFriendly() {
+    // Two knights on d4 and b5 attack each other, so neither may move to the
+    // other's square.
+    Bitboard pieceBB = bb_Square(27) | bb_Square(33);
+    Bitboard result = bb_genKnightMoves(pieceBB, 0);
+    bool Success = (result & bb_Square(27)) == 0;
+    Success &= (result & bb_Square(33)) == 0;
+    return Success;
+}
+
+static bool test_bbGenKnight_friendlyBlocked() {
+    // A knight on d4 cannot move onto a friendly knight on e2 (which d4 attacks);
+    // the symmetric d4<->e2 pair means neither square is ever a destination.
+    Bitboard pieceBB = bb_Square(27) | bb_Square(12);
+    Bitboard result = bb_genKnightMoves(pieceBB, 0);
+    bool Success = (result & bb_Square(12)) == 0;
+    Success &= (result & bb_Square(27)) == 0;
+    return Success;
+}
+
+static bool test_bbGenKnight_matchesOracle() {
+    // Every single-knight position must match the independent offset oracle.
+    bool Success = true;
+    for (int sq = 0; sq < 64; ++sq) {
+        Bitboard pieceBB = bb_Square(sq);
+        Success &= bb_genKnightMoves(pieceBB, 0) == t_expectedKnightMoves(pieceBB, 0);
+    }
+    // Plus a few multi-piece / capture / friendly positions.
+    Bitboard casesP[4];
+    Bitboard casesE[4];
+    casesP[0] = bb_Square(27) | bb_Square(33);              casesE[0] = 0;                 // friendly block
+    casesP[1] = bb_Square(27);                             casesE[1] = bb_Square(17);      // a capture
+    casesP[2] = bb_Square(0) | bb_Square(10) | bb_Square(17); casesE[2] = 0;              // boxed in
+    casesP[3] = bb_Square(27) | bb_Square(28);            casesE[3] = bb_Square(36);      // two knights + enemy
+    for (int i = 0; i < 4; ++i) {
+        Success &= bb_genKnightMoves(casesP[i], casesE[i]) == t_expectedKnightMoves(casesP[i], casesE[i]);
+    }
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3180,6 +3273,7 @@ extern void bb_initBetween(void);
 extern void bb_initRayPass(void);
 extern Bitboard bb_bishopAttacks(int sq, Bitboard occupied);
 extern Bitboard bb_rookAttacks(int sq, Bitboard occupied);
+extern Bitboard bb_genKnightMoves(Bitboard pieceBB, Bitboard enemyBB);
 
 int main() {
     bool Success = true;
@@ -3350,6 +3444,12 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbRayPass_sameSquare();
     Success &= test_bbRayPass_directional();
     Success &= test_bbRayPass_matchesOracle();
+    Success &= test_bbGenKnight_center();
+    Success &= test_bbGenKnight_corner();
+    Success &= test_bbGenKnight_capture();
+    Success &= test_bbGenKnight_blocksFriendly();
+    Success &= test_bbGenKnight_friendlyBlocked();
+    Success &= test_bbGenKnight_matchesOracle();
     assert(Success);
 
     return !Success;

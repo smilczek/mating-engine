@@ -60,7 +60,7 @@
 [x] 27. Build `BB_RayPass[64][64]` — squares beyond s2 going from s1
 
 ## Move Generation
-[ ] 28. Implement `bb_genKnightMoves(pieceBB, enemyBB)` — all knight moves via bitboard ops
+[x] 28. Implement `bb_genKnightMoves(pieceBB, enemyBB)` — all knight moves via bitboard ops
 [ ] 29. Implement `bb_genKingMoves(kingSq, friendlyBB, enemyBB)` — all king moves
 [ ] 30. Implement `bb_genBishopMoves(bishopBB, allOccBB, enemyBB)` — sliding moves with captures separated
 [ ] 31. Implement `bb_genRookMoves(rookBB, allOccBB, enemyBB)` — sliding moves with captures separated
