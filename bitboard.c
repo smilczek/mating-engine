@@ -877,6 +877,158 @@ Bitboard bb_genCastlingMoves(BitboardState *s) {
     return result;
 }
 
+// Full pseudo-legal move generation (task 35).
+//
+// The per-piece generators above return a single *destination* bitboard and lose
+// the originating square, so a full move list (from + to + promotion + flag) is
+// built here by iterating each of the active side's pieces one square at a time.
+// A piece may land only on an empty or enemy square, so every result is masked
+// with `~friendly` (all of the mover's colour) -- matching chess.c, whose
+// generator refuses to land on a friendly piece regardless of its type.
+//
+//   s : the position; the active colour is the mover.
+//
+// Pawns are emitted with their four promotion types when they reach the last
+// rank and with the en-passant flag set for an en-passant capture. Castling is
+// delegated to bb_genCastlingMoves. The "king not left in check" rule is applied
+// later by bb_filterLegalMoves (mirrors chess.c's "simple check").
+
+#define BB_MOVE_LIST_SIZE 256
+
+typedef struct {
+    bb_Move List[BB_MOVE_LIST_SIZE];
+    int Count;
+} bb_MoveList;
+
+static void bb_addMove(bb_MoveList *ml, bb_Move m) {
+    assert(ml->Count < BB_MOVE_LIST_SIZE);
+    ml->List[ml->Count++] = m;
+}
+
+// Emit one move per set bit in `dests`, all departing from `from`.
+static void bb_emitDestinations(bb_MoveList *ml, int from, Bitboard dests,
+                                int promotion, int flags) {
+    while (dests) {
+        int to = bb_pop_lsb(&dests);
+        bb_addMove(ml, bb_encodeMove(from, to, promotion, flags));
+    }
+}
+
+// Pawns need special handling: a push or capture landing on the last rank is
+// emitted as all four promotion moves, and an en-passant capture is flagged.
+static void bb_emitPawnMoves(BitboardState *s, Color c, int from, bb_MoveList *ml) {
+    int dir       = (c == WHITE) ? 1 : -1;
+    int boostRank = (c == WHITE) ? 1 : 6;
+    int promoRank = (c == WHITE) ? 7 : 0;
+    Bitboard allOcc = s->AllPieces;
+    Bitboard enemy  = s->Occupancy[c ^ 1];
+    int rank = from / 8;
+    int file = from % 8;
+    int nr   = rank + dir;
+
+    // Push (single, and a double only from the starting rank when the intermediate
+    // square is empty), matching bb_genPawnMoves' gating.
+    if (nr >= 0 && nr < 8) {
+        int single = nr * 8 + file;
+        if (!(allOcc & bb_Square(single))) {
+            if (nr == promoRank) {
+                bb_addMove(ml, bb_encodeMove(from, single, QUEEN,  0));
+                bb_addMove(ml, bb_encodeMove(from, single, ROOK,   0));
+                bb_addMove(ml, bb_encodeMove(from, single, BISHOP, 0));
+                bb_addMove(ml, bb_encodeMove(from, single, KNIGHT, 0));
+            } else {
+                bb_addMove(ml, bb_encodeMove(from, single, 0, 0));
+                if (rank == boostRank) {
+                    int nr2 = rank + 2 * dir;
+                    if (nr2 >= 0 && nr2 < 8) {
+                        int dbl = nr2 * 8 + file;
+                        if (!(allOcc & bb_Square(dbl)))
+                            bb_addMove(ml, bb_encodeMove(from, dbl, 0, 0));
+                    }
+                }
+            }
+        }
+    }
+
+    // Diagonal captures onto enemy squares; a capture reaching the last rank is a
+    // four-way promotion, otherwise a single capture.
+    Bitboard captures = BB_PawnAttacks[c][from] & enemy;
+    while (captures) {
+        int to = bb_pop_lsb(&captures);
+        if (to / 8 == promoRank) {
+            bb_addMove(ml, bb_encodeMove(from, to, QUEEN,  0));
+            bb_addMove(ml, bb_encodeMove(from, to, ROOK,   0));
+            bb_addMove(ml, bb_encodeMove(from, to, BISHOP, 0));
+            bb_addMove(ml, bb_encodeMove(from, to, KNIGHT, 0));
+        } else {
+            bb_addMove(ml, bb_encodeMove(from, to, 0, 0));
+        }
+    }
+
+    // En passant: the (empty) en-passant target, when this pawn attacks it.
+    if (s->EnPassant >= 0 && (BB_PawnAttacks[c][from] & bb_Square(s->EnPassant)) &&
+        !(allOcc & bb_Square(s->EnPassant))) {
+        bb_addMove(ml, bb_encodeMove(from, s->EnPassant, 0, 1));
+    }
+}
+
+bb_MoveList bb_genPseudoLegalMoves(BitboardState *s) {
+    bb_MoveList ml = {0};
+    Color c        = s->ActiveColor;
+    Bitboard friendly = s->Occupancy[c];
+    Bitboard enemy    = s->Occupancy[c ^ 1];
+    Bitboard allOcc   = s->AllPieces;
+
+    // Knights.
+    Bitboard knights = s->Pieces[c][KNIGHT];
+    while (knights) {
+        int from = bb_pop_lsb(&knights);
+        bb_emitDestinations(&ml, from, BB_PseudoAttacks_Knight[from] & ~friendly, 0, 0);
+    }
+
+    // Bishops / rooks / queens: slide, dropping friendly blockers.
+    Bitboard bishops = s->Pieces[c][BISHOP];
+    while (bishops) {
+        int from = bb_pop_lsb(&bishops);
+        bb_emitDestinations(&ml, from, bb_bishopAttacks(from, allOcc) & ~friendly, 0, 0);
+    }
+    Bitboard rooks = s->Pieces[c][ROOK];
+    while (rooks) {
+        int from = bb_pop_lsb(&rooks);
+        bb_emitDestinations(&ml, from, bb_rookAttacks(from, allOcc) & ~friendly, 0, 0);
+    }
+    Bitboard queens = s->Pieces[c][QUEEN];
+    while (queens) {
+        int from = bb_pop_lsb(&queens);
+        bb_emitDestinations(&ml, from, bb_queenAttacks(from, allOcc) & ~friendly, 0, 0);
+    }
+
+    // King.
+    Bitboard kings = s->Pieces[c][KING];
+    while (kings) {
+        int from = bb_pop_lsb(&kings);
+        bb_emitDestinations(&ml, from, BB_PseudoAttacks_King[from] & ~friendly, 0, 0);
+    }
+
+    // Pawns (pushes, doubles, captures, promotions, en passant).
+    Bitboard pawns = s->Pieces[c][PAWN];
+    while (pawns) {
+        int from = bb_pop_lsb(&pawns);
+        bb_emitPawnMoves(s, c, from, &ml);
+    }
+
+    // Castling (king jumps to the rook's file; the rook move itself is applied
+    // later by bb_applyMove).
+    Bitboard castles = bb_genCastlingMoves(s);
+    int home = (c == WHITE ? 0 : 7) * 8 + 4;
+    while (castles) {
+        int to = bb_pop_lsb(&castles);
+        bb_addMove(&ml, bb_encodeMove(home, to, 0, 0));
+    }
+
+    return ml;
+}
+
 Bitboard bb_slidingAttack_bishop(int sq, Bitboard occupied) {
     int file = sq % 8;
     int rank = sq / 8;

@@ -3952,6 +3952,75 @@ static bool test_bbMoveIsCastling() {
     return Success;
 }
 
+static bool bb_moveListHas(bb_MoveList *ml, int from, int to, int promotion, int flags) {
+    for (int i = 0; i < ml->Count; i++) {
+        bb_MvDecoded d = bb_decodeMove(ml->List[i]);
+        if (d.from == from && d.to == to && d.promotion == promotion && d.flags == flags)
+            return true;
+    }
+    return false;
+}
+
+static bool test_bbGenPseudoLegal_initial() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    bb_MoveList ml = bb_genPseudoLegalMoves(&BS);
+    // 16 pawn pushes (8 single + 8 double) + 4 knight moves; everything else blocked.
+    Success &= ml.Count == 20;
+    Success &= bb_moveListHas(&ml, 12, 28, 0, 0);  // e2-e4
+    Success &= bb_moveListHas(&ml, 8, 16, 0, 0);   // a2-a3
+    Success &= bb_moveListHas(&ml, 1, 18, 0, 0);   // Nb1-c3
+    Success &= bb_moveListHas(&ml, 6, 23, 0, 0);   // Ng1-h3
+    if (!Success)
+        fprintf(stderr, "FAIL %s: count=%d\n", __func__, ml.Count);
+    return Success;
+}
+
+static bool test_bbGenPseudoLegal_promotion() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "8/4P3/8/8/8/8/4k3/4K3 w - - 0 1");
+    bb_MoveList ml = bb_genPseudoLegalMoves(&BS);
+    // The pawn on e7 (52) reaching e8 (60) is a four-way promotion.
+    int promoCount = 0;
+    bool hasQ = false, hasR = false, hasB = false, hasN = false;
+    for (int i = 0; i < ml.Count; i++) {
+        bb_MvDecoded d = bb_decodeMove(ml.List[i]);
+        if (d.from == 52 && d.to == 60 && d.promotion != 0) {
+            promoCount++;
+            if (d.promotion == QUEEN)  hasQ = true;
+            if (d.promotion == ROOK)   hasR = true;
+            if (d.promotion == BISHOP) hasB = true;
+            if (d.promotion == KNIGHT) hasN = true;
+        }
+    }
+    Success &= promoCount == 4 && hasQ && hasR && hasB && hasN;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: promoCount=%d Q=%d R=%d B=%d N=%d\n",
+                __func__, promoCount, hasQ, hasR, hasB, hasN);
+    return Success;
+}
+
+static bool test_bbGenPseudoLegal_enPassant() {
+    bool Success = true;
+    BitboardState BS;
+    bb_parseFEN(&BS, "8/8/8/3pP3/8/8/8/4K2k w - d6 0 1");
+    bb_MoveList ml = bb_genPseudoLegalMoves(&BS);
+    // The white pawn on e5 (36) takes en passant to d6 (43).
+    bool found = false;
+    for (int i = 0; i < ml.Count; i++) {
+        if (bb_moveIsEnPassant(ml.List[i])) {
+            bb_MvDecoded d = bb_decodeMove(ml.List[i]);
+            if (d.from == 36 && d.to == 43) found = true;
+        }
+    }
+    Success &= found;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: no en passant move e5(36)->d6(43)\n", __func__);
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3969,7 +4038,8 @@ extern Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allO
 extern Bitboard bb_genCastlingMoves(BitboardState *s);
 extern bb_Move bb_encodeMove(int from, int to, int promotion, int flags);
 extern bb_MvDecoded bb_decodeMove(bb_Move m);
-extern int bb_moveIsCastling(bb_Move m);
+extern int  bb_moveIsCastling(bb_Move m);
+extern bb_MoveList bb_genPseudoLegalMoves(BitboardState *s);
 extern int bb_moveIsEnPassant(bb_Move m);
 extern int bb_moveIsPromotion(bb_Move m);
 
@@ -4193,6 +4263,9 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbMoveIsPromotion();
     Success &= test_bbMoveIsEnPassant();
     Success &= test_bbMoveIsCastling();
+    Success &= test_bbGenPseudoLegal_initial();
+    Success &= test_bbGenPseudoLegal_promotion();
+    Success &= test_bbGenPseudoLegal_enPassant();
     assert(Success);
 
     return !Success;
