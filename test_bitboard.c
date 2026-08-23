@@ -3884,6 +3884,74 @@ static bool test_bbGenCastling_matchesOracle(void) {
     return Success;
 }
 
+static bool test_bbMove_bitLayout() {
+    bool Success = true;
+    // 6 from + 6 to + 3 promotion + 1 flag, packed low-to-high.
+    Success &= bb_encodeMove(0, 0, 0, 0) == 0;
+    Success &= bb_encodeMove(1, 0, 0, 0) == 1;
+    Success &= bb_encodeMove(0, 1, 0, 0) == (1 << 6);
+    Success &= bb_encodeMove(0, 0, 1, 0) == (1 << 12);
+    Success &= bb_encodeMove(0, 0, 0, 1) == (1 << 15);
+    if (!Success)
+        fprintf(stderr, "FAIL %s: fields not packed as 6|6|3|1\n", __func__);
+    return Success;
+}
+
+static bool test_bbEncodeDecode_roundTrip() {
+    bool Success = true;
+    // quiet push e2 (12) -> e4 (28)
+    bb_MvDecoded d = bb_decodeMove(bb_encodeMove(12, 28, 0, 0));
+    Success &= d.from == 12 && d.to == 28 && d.promotion == 0 && d.flags == 0;
+    // promotion a7 (56) -> h8 (63), promo = QUEEN
+    bb_MvDecoded p = bb_decodeMove(bb_encodeMove(56, 63, QUEEN, 0));
+    Success &= p.from == 56 && p.to == 63 && p.promotion == QUEEN && p.flags == 0;
+    // en passant d2 (19) -> e3 (27), flag set
+    bb_MvDecoded e = bb_decodeMove(bb_encodeMove(19, 27, 0, 1));
+    Success &= e.from == 19 && e.to == 27 && e.promotion == 0 && e.flags == 1;
+    // every field maxed must survive the round-trip
+    bb_MvDecoded m = bb_decodeMove(bb_encodeMove(63, 63, 7, 1));
+    Success &= m.from == 63 && m.to == 63 && m.promotion == 7 && m.flags == 1;
+    if (!Success)
+        fprintf(stderr, "FAIL %s: round-trip lost from=%d to=%d promo=%d flag=%d\n",
+                __func__, d.from, d.to, d.promotion, d.flags);
+    return Success;
+}
+
+static bool test_bbMoveIsPromotion() {
+    bool Success = true;
+    Success &= bb_moveIsPromotion(bb_encodeMove(56, 63, QUEEN, 0)) == 1;
+    Success &= bb_moveIsPromotion(bb_encodeMove(56, 63, KNIGHT, 0)) == 1;
+    Success &= bb_moveIsPromotion(bb_encodeMove(12, 28, 0, 0)) == 0;
+    if (!Success)
+        fprintf(stderr, "FAIL %s\n", __func__);
+    return Success;
+}
+
+static bool test_bbMoveIsEnPassant() {
+    bool Success = true;
+    Success &= bb_moveIsEnPassant(bb_encodeMove(19, 27, 0, 1)) == 1;
+    Success &= bb_moveIsEnPassant(bb_encodeMove(12, 28, 0, 0)) == 0;
+    if (!Success)
+        fprintf(stderr, "FAIL %s\n", __func__);
+    return Success;
+}
+
+static bool test_bbMoveIsCastling() {
+    bool Success = true;
+    // king-side / queen-side, both colors
+    Success &= bb_moveIsCastling(bb_encodeMove(4, 6, 0, 0)) == 1;
+    Success &= bb_moveIsCastling(bb_encodeMove(4, 2, 0, 0)) == 1;
+    Success &= bb_moveIsCastling(bb_encodeMove(60, 62, 0, 0)) == 1;
+    Success &= bb_moveIsCastling(bb_encodeMove(60, 58, 0, 0)) == 1;
+    // a normal one-square king move is not castling
+    Success &= bb_moveIsCastling(bb_encodeMove(4, 5, 0, 0)) == 0;
+    // a 2-file jump off the back rank is not castling
+    Success &= bb_moveIsCastling(bb_encodeMove(12, 14, 0, 0)) == 0;
+    if (!Success)
+        fprintf(stderr, "FAIL %s\n", __func__);
+    return Success;
+}
+
 extern void bb_initPseudoAttacks(void);
 extern void bb_initMagics(void);
 extern void bb_initLine(void);
@@ -3899,6 +3967,11 @@ extern Bitboard bb_genRookMoves(Bitboard rookBB, Bitboard allOccBB, Bitboard ene
 extern Bitboard bb_genQueenMoves(Bitboard queenBB, Bitboard allOccBB, Bitboard enemyBB);
 extern Bitboard bb_genPawnMoves(Bitboard pawnBB, Bitboard enemyBB, Bitboard allOccBB, Color color, int enPassant);
 extern Bitboard bb_genCastlingMoves(BitboardState *s);
+extern bb_Move bb_encodeMove(int from, int to, int promotion, int flags);
+extern bb_MvDecoded bb_decodeMove(bb_Move m);
+extern int bb_moveIsCastling(bb_Move m);
+extern int bb_moveIsEnPassant(bb_Move m);
+extern int bb_moveIsPromotion(bb_Move m);
 
 int main() {
     bool Success = true;
@@ -4115,6 +4188,11 @@ Success &= test_bbPseudoAttacksKnight_corners();
     Success &= test_bbGenCastling_blackKingSide();
     Success &= test_bbGenCastling_kingNotHome();
     Success &= test_bbGenCastling_matchesOracle();
+    Success &= test_bbMove_bitLayout();
+    Success &= test_bbEncodeDecode_roundTrip();
+    Success &= test_bbMoveIsPromotion();
+    Success &= test_bbMoveIsEnPassant();
+    Success &= test_bbMoveIsCastling();
     assert(Success);
 
     return !Success;

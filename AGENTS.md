@@ -70,9 +70,9 @@
 [ ] 35. Implement `bb_genPseudoLegalMoves()` — full pseudo-legal move generator returning bitboards
 
 ## Move Encoding
-[ ] 36. Design bit-packed `Move` type (e.g., 15 bits: 6 from + 6 to + 3 promo + 1 flag)
-[ ] 37. Implement `bb_encodeMove(from, to, promotion, flags)` / `bb_decodeMove()`
-[ ] 38. Implement `bb_moveIsCastling()`, `bb_moveIsEnPassant()`, `bb_moveIsPromotion()`
+[x] 36. Design bit-packed `Move` type (16 bits: 6 from + 6 to + 3 promotion + 1 flag) — flag bit = en passant; castling inferred from from/to (matches chess.c so move sets stay parity-comparable)
+[x] 37. Implement `bb_encodeMove(from, to, promotion, flags)` / `bb_decodeMove()` (returns `bb_MvDecoded{from,to,promotion,flags}`)
+[x] 38. Implement `bb_moveIsCastling()`, `bb_moveIsEnPassant()`, `bb_moveIsPromotion()`
 
 ## Move Application
 [ ] 39. Implement `bb_applyMove()` — update all bitboards, castling rights, en passant, halfmove clock

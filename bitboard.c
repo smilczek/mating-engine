@@ -85,6 +85,59 @@ static inline void bb_updateOccupancy(BitboardState *s) {
     s->Blocked = s->AllPieces;
 }
 
+// Move Encoding (tasks 36-38): 16 bits = 6 from + 6 to + 3 promotion + 1 flag.
+// The flag bit marks an en passant capture; castling is inferred from from/to
+// (a king jumping two files on the back rank), matching chess.c so the two move
+// generators stay parity-comparable. The 3-bit promotion field holds a PieceType
+// (0 = no promotion).
+typedef unsigned short bb_Move;
+
+#define BB_MOVE_FROM_MASK   0x3F
+#define BB_MOVE_TO_SHIFT    6
+#define BB_MOVE_TO_MASK     0x3F
+#define BB_MOVE_PROMO_SHIFT 12
+#define BB_MOVE_PROMO_MASK  0x7
+#define BB_MOVE_FLAG_SHIFT  15
+#define BB_MOVE_FLAG_MASK   0x1
+
+typedef struct {
+    int from;
+    int to;
+    int promotion;   // 0 = no promotion; else a PieceType (KNIGHT..QUEEN)
+    int flags;       // bit 0 = en passant
+} bb_MvDecoded;
+
+bb_Move bb_encodeMove(int from, int to, int promotion, int flags) {
+    return (bb_Move)((from & BB_MOVE_FROM_MASK)
+                    | ((to & BB_MOVE_TO_MASK) << BB_MOVE_TO_SHIFT)
+                    | ((promotion & BB_MOVE_PROMO_MASK) << BB_MOVE_PROMO_SHIFT)
+                    | ((flags & BB_MOVE_FLAG_MASK) << BB_MOVE_FLAG_SHIFT));
+}
+
+bb_MvDecoded bb_decodeMove(bb_Move m) {
+    bb_MvDecoded d;
+    d.from      = m & BB_MOVE_FROM_MASK;
+    d.to        = (m >> BB_MOVE_TO_SHIFT) & BB_MOVE_TO_MASK;
+    d.promotion = (m >> BB_MOVE_PROMO_SHIFT) & BB_MOVE_PROMO_MASK;
+    d.flags     = (m >> BB_MOVE_FLAG_SHIFT) & BB_MOVE_FLAG_MASK;
+    return d;
+}
+
+int bb_moveIsEnPassant(bb_Move m) {
+    return (m >> BB_MOVE_FLAG_SHIFT) & BB_MOVE_FLAG_MASK;
+}
+
+int bb_moveIsPromotion(bb_Move m) {
+    return ((m >> BB_MOVE_PROMO_SHIFT) & BB_MOVE_PROMO_MASK) != 0;
+}
+
+int bb_moveIsCastling(bb_Move m) {
+    int from = m & BB_MOVE_FROM_MASK;
+    int to   = (m >> BB_MOVE_TO_SHIFT) & BB_MOVE_TO_MASK;
+    return (from == 4  && (to == 6  || to == 2))
+        || (from == 60 && (to == 62 || to == 58));
+}
+
 Bitboard bb_shift(Bitboard B, Direction D) {
     // I tried to be a smartass here, but decided to prioritise readability.
     return D == DIR_NORTH     ? B << 8 :
